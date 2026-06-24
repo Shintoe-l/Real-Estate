@@ -1,0 +1,24 @@
+# --- .NET Build and Output files ---
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+
+# --- Visual Studio / IDE temporary files ---
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# --- OS generated files ---
+.DS_Store
+Thumbs.db
+
+# --- Node & Frontend Build files (as fallback/root coverage) ---
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.angular/cache/
+Frontend/tmp/
+Frontend/out-tsc/
