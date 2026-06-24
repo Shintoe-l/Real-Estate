@@ -1,0 +1,30 @@
+<div class="tab-pane fade-in">
+  <div class="card-glass">
+    <h3>📜 Lease Contracts Directory</h3>
+    <table class="table-premium">
+      <thead>
+        <tr>
+          <th>Lease ID</th>
+          <th>Tenant ID</th>
+          <th>Property ID</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Monthly Rent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of store.myLeases()" class="fade-in">
+          <td class="code">{{ l.id.substring(0,8) }}...</td>
+          <td class="code">{{ l.tenantId.substring(0,8) }}...</td>
+          <td class="code">{{ l.propertyId.substring(0,8) }}...</td>
+          <td>{{ l.startDate | date:'mediumDate' }}</td>
+          <td>{{ l.endDate | date:'mediumDate' }}</td>
+          <td class="bold">${{ l.monthlyRent | number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="store.myLeases().length === 0" class="empty-state">
+      <p>No active lease contracts registered.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,83 @@
+<div class="tab-pane fade-in">
+  <h2>Welcome, {{ store.currentUser().firstName }}</h2>
+  <p class="tab-subtitle">Here is your digital estate overview summary.</p>
+
+  <!-- Core Widgets -->
+  <div class="widgets-grid">
+    <div class="widget-card">
+      <span class="widget-icon color-blue">🏠</span>
+      <div class="widget-data">
+        <h3>Properties</h3>
+        <p class="number">{{ store.myProperties().length }}</p>
+      </div>
+    </div>
+    <div class="widget-card">
+      <span class="widget-icon color-green">📜</span>
+      <div class="widget-data">
+        <h3>Active Leases</h3>
+        <p class="number">{{ store.myLeases().length }}</p>
+      </div>
+    </div>
+    <div class="widget-card">
+      <span class="widget-icon color-yellow">🛠️</span>
+      <div class="widget-data">
+        <h3>Open Requests</h3>
+        <p class="number">{{ store.myMaintenanceRequests().length }}</p>
+      </div>
+    </div>
+    <div class="widget-card">
+      <span class="widget-icon color-purple">💳</span>
+      <div class="widget-data">
+        <h3>Transactions</h3>
+        <p class="number">{{ store.myPayments().length }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPECIALIZED VIEWPORTS -->
+
+  <!-- 1. TENANT SPECIFIC VIEW -->
+  <div *ngIf="store.currentUser().role === 2" class="special-viewport fade-in">
+    <div class="card-glass content-card" style="margin-bottom: 24px;">
+      <h3>⚡ Quick Actions</h3>
+      <div class="quick-action-buttons">
+        <button class="btn btn-primary" (click)="store.dashboardTab.set('payments')">Pay Monthly Rent</button>
+        <button class="btn btn-secondary" (click)="store.dashboardTab.set('maintenance')">Request Repair</button>
+      </div>
+    </div>
+
+    <div class="content-split-grid">
+      <div class="card-glass">
+        <h3>🏠 My Leased Residence</h3>
+        <div *ngFor="let lease of store.myLeases()">
+          <div class="lease-residence-detail">
+            <h4>Active Lease Contract</h4>
+            <p>📅 Rent Term: {{ lease.startDate | date:'mediumDate' }} &mdash; {{ lease.endDate | date:'mediumDate' }}</p>
+            <p>💰 Monthly Obligation: <strong>${{ lease.monthlyRent | number:'1.2-2' }}</strong></p>
+          </div>
+        </div>
+        <div *ngIf="store.myLeases().length === 0" class="empty-state">
+          <p>You currently do not have any active leases. Browse properties on the homepage to find one.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. LANDLORD SPECIFIC VIEW -->
+  <div *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3" class="special-viewport fade-in">
+    <div class="card-glass content-card">
+      <h3>🛠️ Manager Quick Actions</h3>
+      <div class="quick-action-buttons">
+        <button class="btn btn-primary" (click)="store.dashboardTab.set('properties')">Add New Property</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ADMIN SPECIFIC VIEW -->
+  <div *ngIf="store.currentUser().role === 0" class="special-viewport fade-in">
+    <div class="card-glass content-card">
+      <h3>🛡️ System Administration Console</h3>
+      <p>You have full access to global tables and operations.</p>
+    </div>
+  </div>
+</div>

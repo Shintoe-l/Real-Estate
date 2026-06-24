@@ -1,0 +1,23 @@
+<header class="navbar">
+  <div class="nav-container">
+    <div class="brand" (click)="store.navigateTo('home')">
+      <img src="assets/logo.png" alt="TBee Logo" class="brand-logo" />
+      <span class="brand-name">TBEE ESTATES</span>
+    </div>
+    <nav class="nav-links">
+      <a (click)="store.navigateTo('home')" [class.active]="store.activePage() === 'home'">Browse</a>
+      <a *ngIf="store.currentUser()" (click)="store.navigateTo('dashboard')" [class.active]="store.activePage() === 'dashboard'">Dashboard</a>
+      
+      <ng-container *ngIf="!store.currentUser(); else loggedIn">
+        <button class="btn btn-secondary" (click)="store.navigateTo('login')">Log In</button>
+        <button class="btn btn-primary" (click)="store.navigateTo('register')">Sign Up</button>
+      </ng-container>
+      <ng-template #loggedIn>
+        <div class="user-pill">
+          <span class="user-name">{{ store.currentUser().firstName }} ({{ store.getRoleName(store.currentUser().role) }})</span>
+          <button class="btn btn-logout" (click)="store.onLogout()">Log Out</button>
+        </div>
+      </ng-template>
+    </nav>
+  </div>
+</header>

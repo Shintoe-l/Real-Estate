@@ -1,0 +1,108 @@
+<div class="tab-pane fade-in">
+  <!-- Tenant View: Send Applications list -->
+  <div *ngIf="store.currentUser().role === 2" class="card-glass">
+    <h3>📋 My Sent Rental & Purchase Applications</h3>
+    <table class="table-premium">
+      <thead>
+        <tr>
+          <th>Application ID</th>
+          <th>Property ID</th>
+          <th>Type</th>
+          <th>Date Applied</th>
+          <th>Status</th>
+          <th>Owner Feedback</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of store.myApplications()" class="fade-in">
+          <td class="code">{{ a.id.substring(0,8) }}...</td>
+          <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
+          <td>
+            <span class="status-indicator bg-blue">
+              {{ store.getApplicationTypeName(a.type) }}
+            </span>
+          </td>
+          <td>{{ a.appliedDate | date:'mediumDate' }}</td>
+          <td>
+            <span class="status-indicator" [class.bg-yellow]="a.status === 0" [class.bg-green]="a.status === 1" [class.bg-danger]="a.status === 2">
+              {{ store.getApplicationStatusName(a.status) }}
+            </span>
+          </td>
+          <td>
+            <span *ngIf="a.status === 0" class="text-italic" style="color: var(--text-muted); font-size: 12px;">
+              ⏳ Waiting for response from property owner
+            </span>
+            <ng-container *ngIf="a.status === 1">
+              <ng-container *ngIf="a.type === 2">
+                <span class="bold color-green" style="font-size: 12px;">
+                  ✅ Viewing approved
+                </span>
+              </ng-container>
+              <ng-container *ngIf="a.type !== 2">
+                <span class="bold color-green" style="font-size: 12px;">
+                  ✅ Approved! Contract established.
+                </span>
+              </ng-container>
+            </ng-container>
+            <span *ngIf="a.status === 2" class="color-red" style="font-size: 12px;">
+              ❌ Application declined by owner.
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="store.myApplications().length === 0" class="empty-state">
+      <p>You have not submitted any applications yet.</p>
+    </div>
+  </div>
+
+  <!-- Landlord/PM View: Received Applications list -->
+  <div *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" class="card-glass">
+    <h3>📋 Received Applications for My Properties</h3>
+    <table class="table-premium">
+      <thead>
+        <tr>
+          <th>Application ID</th>
+          <th>Property ID</th>
+          <th>Applicant ID</th>
+          <th>Application Type</th>
+          <th>Applied Date</th>
+          <th>Status</th>
+          <th style="text-align: right;">Review Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of store.myApplications()" class="fade-in">
+          <td class="code">{{ a.id.substring(0,8) }}...</td>
+          <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
+          <td class="code">{{ a.tenantId.substring(0,8) }}...</td>
+          <td>
+            <span class="status-indicator bg-blue">
+              {{ store.getApplicationTypeName(a.type) }}
+            </span>
+          </td>
+          <td>{{ a.appliedDate | date:'mediumDate' }}</td>
+          <td>
+            <span class="status-indicator" [class.bg-yellow]="a.status === 0" [class.bg-green]="a.status === 1" [class.bg-danger]="a.status === 2">
+              {{ store.getApplicationStatusName(a.status) }}
+            </span>
+          </td>
+          <td style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+            <ng-container *ngIf="a.status === 0; else actionedState">
+              <button class="btn btn-sm btn-primary" (click)="store.approveApplication(a)">Approve</button>
+              <button class="btn btn-sm btn-danger" (click)="store.rejectApplication(a)">Reject</button>
+            </ng-container>
+            <ng-template #actionedState>
+              <span class="text-italic" style="color: var(--text-muted); font-size: 12px;">
+                Processed
+              </span>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="store.myApplications().length === 0" class="empty-state">
+      <p>No pending applications received.</p>
+    </div>
+  </div>
+</div>

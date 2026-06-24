@@ -1,0 +1,85 @@
+<!-- Navigation Header -->
+<app-navbar></app-navbar>
+
+<!-- Main Workspace -->
+<main class="main-content">
+
+  <!-- ==================== 1. LANDING PAGE ==================== -->
+  <section *ngIf="store.activePage() === 'home'" class="page home-page fade-in">
+    <!-- Hero Block -->
+    <div class="hero-section" style="background-image: linear-gradient(180deg, rgba(15,15,22,0.2) 0%, rgba(15,15,22,0.95) 100%), url('assets/villa_sunset.png');">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <span class="tagline">Luxury Redefined</span>
+        <h1>Find Your Signature Modern Sanctuary</h1>
+        <p>Curated smart-homes, premium locations, and effortless digital leasing management.</p>
+        
+        <!-- Quick Search Bar -->
+        <div class="search-bar-floating">
+          <div class="search-input-group">
+            <span class="icon">📍</span>
+            <input type="text" placeholder="Search by city (e.g. Miami, Seattle)..." [ngModel]="store.searchCity()" (ngModelChange)="store.searchCity.set($event)" />
+          </div>
+          <div class="search-input-group">
+            <span class="icon">🛏️</span>
+            <select [ngModel]="store.searchBedrooms()" (ngModelChange)="store.searchBedrooms.set($event)">
+              <option value="">Bedrooms (All)</option>
+              <option value="1">1+ Bedrooms</option>
+              <option value="2">2+ Bedrooms</option>
+              <option value="3">3+ Bedrooms</option>
+              <option value="4">4+ Bedrooms</option>
+            </select>
+          </div>
+          <div class="search-input-group">
+            <span class="icon">🏢</span>
+            <select [ngModel]="store.searchType()" (ngModelChange)="store.searchType.set($event)">
+              <option value="">Type (All)</option>
+              <option value="0">Residential</option>
+              <option value="1">Commercial</option>
+              <option value="2">Industrial</option>
+            </select>
+          </div>
+          <div class="search-input-group">
+            <span class="icon">💰</span>
+            <input type="number" placeholder="Max monthly rent..." [ngModel]="store.searchMaxPrice()" (ngModelChange)="store.searchMaxPrice.set($event)" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Properties Grid -->
+    <div class="container section-properties">
+      <div class="section-header">
+        <div>
+          <h2>Available Exquisite Properties</h2>
+          <p>Explore luxury living options tailored to your distinct lifestyle</p>
+        </div>
+        <div class="results-count">
+          Showing <strong>{{ store.filteredProperties().length }}</strong> properties
+        </div>
+      </div>
+
+      <!-- Properties Layout -->
+      <div class="properties-layout">
+        <!-- Main List -->
+        <div class="cards-grid">
+          <app-property-card *ngFor="let p of store.filteredProperties()" [property]="p"></app-property-card>
+
+          <div *ngIf="store.filteredProperties().length === 0" class="no-results fade-in">
+            <span class="no-results-icon">🔎</span>
+            <h3>No Properties Found</h3>
+            <p>Try expanding your search criteria or modifying your filters.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 2. AUTHENTICATION PAGES ==================== -->
+  <app-login *ngIf="store.activePage() === 'login'"></app-login>
+  <app-register *ngIf="store.activePage() === 'register'"></app-register>
+
+  <!-- ==================== 3. ROLE-BASED DASHBOARD ==================== -->
+  <app-dashboard *ngIf="store.activePage() === 'dashboard' && store.currentUser()"></app-dashboard>
+
+</main>

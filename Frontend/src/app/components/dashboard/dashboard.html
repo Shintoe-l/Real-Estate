@@ -1,0 +1,64 @@
+<section class="page dashboard-page fade-in">
+  <div class="dashboard-container">
+    
+    <!-- Dashboard Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <div class="user-avatar">👤</div>
+        <div>
+          <h3>{{ store.currentUser().firstName }} {{ store.currentUser().lastName }}</h3>
+          <span class="role-badge">{{ store.getRoleName(store.currentUser().role) }}</span>
+        </div>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li>
+          <a (click)="store.dashboardTab.set('overview')" [class.active]="store.dashboardTab() === 'overview'">
+            <span>📊</span> Overview Portal
+          </a>
+        </li>
+        <li *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0">
+          <a (click)="store.dashboardTab.set('properties')" [class.active]="store.dashboardTab() === 'properties'">
+            <span>🏠</span> Manage Properties
+          </a>
+        </li>
+        <li>
+          <a (click)="store.dashboardTab.set('leases')" [class.active]="store.dashboardTab() === 'leases'">
+            <span>📜</span> Leases & Contracts
+          </a>
+        </li>
+        <li>
+          <a (click)="store.dashboardTab.set('payments')" [class.active]="store.dashboardTab() === 'payments'">
+            <span>💳</span> Transaction History
+          </a>
+        </li>
+        <li>
+          <a (click)="store.dashboardTab.set('maintenance')" [class.active]="store.dashboardTab() === 'maintenance'">
+            <span>🛠️</span> Maintenance Requests
+          </a>
+        </li>
+        <li>
+          <a (click)="store.dashboardTab.set('applications')" [class.active]="store.dashboardTab() === 'applications'">
+            <span>📋</span> Applications
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Dashboard Panel Area -->
+    <div class="dashboard-main">
+      
+      <!-- Feedback messages -->
+      <div *ngIf="store.dashboardError()" class="alert alert-danger">{{ store.dashboardError() }}</div>
+      <div *ngIf="store.dashboardSuccess()" class="alert alert-success">{{ store.dashboardSuccess() }}</div>
+
+      <!-- Render current tab -->
+      <app-overview-tab *ngIf="store.dashboardTab() === 'overview'"></app-overview-tab>
+      <app-properties-tab *ngIf="store.dashboardTab() === 'properties'"></app-properties-tab>
+      <app-leases-tab *ngIf="store.dashboardTab() === 'leases'"></app-leases-tab>
+      <app-payments-tab *ngIf="store.dashboardTab() === 'payments'"></app-payments-tab>
+      <app-maintenance-tab *ngIf="store.dashboardTab() === 'maintenance'"></app-maintenance-tab>
+      <app-applications-tab *ngIf="store.dashboardTab() === 'applications'"></app-applications-tab>
+    </div>
+  </div>
+</section>

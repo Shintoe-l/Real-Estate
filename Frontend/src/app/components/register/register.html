@@ -1,0 +1,66 @@
+<section class="auth-page fade-in">
+  <div class="auth-card auth-card-large">
+    <div class="auth-header">
+      <img src="assets/logo.png" alt="TBee Estates" class="auth-logo" />
+      <h2>Begin Your Journey</h2>
+      <p>Create a dedicated profile based on your real estate requirements</p>
+    </div>
+
+    <div *ngIf="store.authError()" class="alert alert-danger">{{ store.authError() }}</div>
+    <div *ngIf="store.authSuccess()" class="alert alert-success">{{ store.authSuccess() }}</div>
+
+    <form (submit)="onRegister()" #registerForm="ngForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" name="firstName" [(ngModel)]="registerData.firstName" placeholder="Jane" required />
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" name="lastName" [(ngModel)]="registerData.lastName" placeholder="Doe" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-icon-wrapper">
+          <span class="input-icon">✉️</span>
+          <input type="email" name="email" [(ngModel)]="registerData.email" placeholder="jane.doe@example.com" required />
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="text" name="phoneNumber" [(ngModel)]="registerData.phoneNumber" placeholder="+1 (555) 000-1111" required />
+        </div>
+        
+        <div class="form-group">
+          <label>Select Your Profile Role</label>
+          <select name="role" [(ngModel)]="registerData.role" class="select-premium" required>
+            <option [value]="2">Tenant (Renter / Resident)</option>
+            <option [value]="1">Property Owner / Landlord</option>
+            <option [value]="3">Professional Property Manager</option>
+            <option [value]="0">Platform Administrator</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-icon-wrapper">
+          <span class="input-icon">🔒</span>
+          <input type="password" name="password" [(ngModel)]="registerData.password" placeholder="Create a secure password" required />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="!registerForm.form.valid">
+        Establish Secure Profile
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Already have an account? <a (click)="store.navigateTo('login')">Log In here</a></p>
+    </div>
+  </div>
+</section>

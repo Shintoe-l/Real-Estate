@@ -1,0 +1,67 @@
+<div class="tab-pane fade-in">
+  <!-- Tenant: Pay Rent Form -->
+  <div *ngIf="store.currentUser().role === 2" class="card-glass mb-4">
+    <h3>💳 Submit simulated Rent Payment</h3>
+    <form (submit)="submitPayment()" #paymentForm="ngForm" class="property-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Select Leased Agreement</label>
+          <select name="leaseId" [(ngModel)]="newPaymentData.leaseId" required>
+            <option value="">Select Lease Contract</option>
+            <option *ngFor="let l of store.myLeases()" [value]="l.id">Lease Contract (${{ l.monthlyRent }}/mo)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Payment Amount ($)</label>
+          <input type="number" name="amount" [(ngModel)]="newPaymentData.amount" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Transaction Type</label>
+        <select name="type" [(ngModel)]="newPaymentData.type" required>
+          <option [value]="0">Rent Payment</option>
+          <option [value]="1">Security Deposit</option>
+          <option [value]="2">Maintenance Fee</option>
+          <option [value]="3">Other</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="!paymentForm.form.valid">Authorize Payment</button>
+    </form>
+  </div>
+
+  <!-- Transaction List -->
+  <div class="card-glass">
+    <h3>💳 Ledger Transactions List</h3>
+    <table class="table-premium">
+      <thead>
+        <tr>
+          <th>Transaction ID</th>
+          <th>Lease ID</th>
+          <th>Amount Paid</th>
+          <th>Payment Date</th>
+          <th>Type</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of store.myPayments()" class="fade-in">
+          <td class="code">{{ p.id.substring(0,8) }}...</td>
+          <td class="code">{{ p.leaseId.substring(0,8) }}...</td>
+          <td class="bold color-green">${{ p.amount | number:'1.2-2' }}</td>
+          <td>{{ p.paymentDate | date:'medium' }}</td>
+          <td>{{ store.getPaymentTypeName(p.type) }}</td>
+          <td>
+            <span class="status-indicator bg-green">
+              Completed
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="store.myPayments().length === 0" class="empty-state">
+      <p>No transaction history recorded yet.</p>
+    </div>
+  </div>
+</div>

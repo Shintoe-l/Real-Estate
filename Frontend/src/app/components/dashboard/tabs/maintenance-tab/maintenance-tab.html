@@ -1,0 +1,54 @@
+<div class="tab-pane fade-in">
+  <!-- Tenant: Maintenance Request Form -->
+  <div *ngIf="store.currentUser().role === 2" class="card-glass mb-4">
+    <h3>🛠️ Lodge a Maintenance Request</h3>
+    <form (submit)="submitMaintenance()" #maintenanceForm="ngForm" class="property-form">
+      <div class="form-group">
+        <label>Select Associated Residence</label>
+        <select name="propertyId" [(ngModel)]="newMaintenanceData.propertyId" required>
+          <option value="">Choose Residence</option>
+          <option *ngFor="let l of store.myLeases()" [value]="l.propertyId">Leased Residence</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Issue Description</label>
+        <textarea name="description" [(ngModel)]="newMaintenanceData.description" rows="4" placeholder="Detail the issue..." required style="width: 100%; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #fff; font-size: 13px; font-family: inherit; resize: vertical;"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="!maintenanceForm.form.valid">Submit Repair Request</button>
+    </form>
+  </div>
+
+  <!-- Maintenance Requests List -->
+  <div class="card-glass">
+    <h3>🛠️ Maintenance Operations History</h3>
+    <table class="table-premium">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Property ID</th>
+          <th>Description</th>
+          <th>Lodge Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of store.myMaintenanceRequests()" class="fade-in">
+          <td class="code">{{ m.id.substring(0,8) }}...</td>
+          <td class="code">{{ m.propertyId.substring(0,8) }}...</td>
+          <td>{{ m.description }}</td>
+          <td>{{ m.requestDate | date:'mediumDate' }}</td>
+          <td>
+            <span class="status-indicator" [class.bg-yellow]="m.status === 0" [class.bg-blue]="m.status === 1" [class.bg-green]="m.status === 2">
+              {{ store.getMaintenanceStatusName(m.status) }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="store.myMaintenanceRequests().length === 0" class="empty-state">
+      <p>No maintenance service records reported.</p>
+    </div>
+  </div>
+</div>
