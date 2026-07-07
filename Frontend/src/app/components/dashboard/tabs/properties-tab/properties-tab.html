@@ -1,21 +1,24 @@
 <div class="tab-pane fade-in">
   <!-- Landlord: Add/Edit Property Form -->
-  <div *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" class="card-glass mb-4">
+  <div *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0"
+    class="card-glass mb-4">
     <h3 *ngIf="!store.isEditingProperty()">🏠 List an Elegant Property</h3>
     <h3 *ngIf="store.isEditingProperty()">✏️ Edit Property</h3>
     <form (submit)="submitPropertyForm()" #propertyForm="ngForm" class="property-form">
       <div class="form-grid-3">
         <div class="form-group">
           <label>Street Address</label>
-          <input type="text" name="address" [(ngModel)]="newPropertyData.address" placeholder="123 Ocean Drive" required />
+          <input type="text" name="address" [(ngModel)]="newPropertyData.address"
+            placeholder="01 Willard Chiwewe Rd Solusi University" required />
         </div>
         <div class="form-group">
           <label>City</label>
-          <input type="text" name="city" [(ngModel)]="newPropertyData.city" placeholder="Miami" required />
+          <input type="text" name="city" [(ngModel)]="newPropertyData.city" placeholder="Bulawayo" required />
         </div>
         <div class="form-group">
           <label>Province</label>
-          <input type="text" name="province" [(ngModel)]="newPropertyData.province" placeholder="e.g. Gauteng" required />
+          <input type="text" name="province" [(ngModel)]="newPropertyData.province"
+            placeholder="e.g. Matebeleland South" required />
         </div>
         <div class="form-group">
           <label>Property Type</label>
@@ -26,11 +29,13 @@
           </select>
         </div>
         <div class="form-group">
-          <label>{{ newPropertyData.type == 1 ? 'Office Spaces' : (newPropertyData.type == 2 ? 'Loading Docks' : 'Bedrooms') }}</label>
+          <label>{{ newPropertyData.type == 1 ? 'Office Spaces' : (newPropertyData.type == 2 ? 'Loading Docks' :
+            'Bedrooms') }}</label>
           <input type="number" name="bedrooms" [(ngModel)]="newPropertyData.bedrooms" min="0" required />
         </div>
         <div class="form-group">
-          <label>{{ newPropertyData.type == 1 ? 'Parking Spaces' : (newPropertyData.type == 2 ? 'Ceiling Height (ft)' : 'Bathrooms') }}</label>
+          <label>{{ newPropertyData.type == 1 ? 'Parking Spaces' : (newPropertyData.type == 2 ? 'Ceiling Height (ft)' :
+            'Bathrooms') }}</label>
           <input type="number" name="bathrooms" [(ngModel)]="newPropertyData.bathrooms" min="0" step="0.5" required />
         </div>
         <div class="form-group">
@@ -57,7 +62,8 @@
           <label>Property Image / Cover Photo</label>
           <div class="file-upload-wrapper">
             <input type="file" multiple (change)="onFileSelected($event)" accept="image/*" class="input-file-premium" />
-            <div class="upload-preview-gallery" *ngIf="newPropertyData.imageUrls && newPropertyData.imageUrls.length > 0">
+            <div class="upload-preview-gallery"
+              *ngIf="newPropertyData.imageUrls && newPropertyData.imageUrls.length > 0">
               <div class="upload-preview-card" *ngFor="let img of newPropertyData.imageUrls">
                 <img [src]="img" alt="Preview Thumbnail" />
                 <span class="preview-tag">Success</span>
@@ -69,14 +75,17 @@
 
       <div class="form-group" style="margin-bottom: 24px;">
         <label>Property Description / Additional Details</label>
-        <textarea name="description" [(ngModel)]="newPropertyData.description" rows="3" placeholder="Provide elegant highlights, premium features, local hotspots, or utility inclusions..." required style="width: 100%; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #fff; font-size: 13px; font-family: inherit; resize: vertical;"></textarea>
+        <textarea name="description" [(ngModel)]="newPropertyData.description" rows="3"
+          placeholder="Provide elegant highlights, premium features, local hotspots, or utility inclusions..." required
+          style="width: 100%; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #fff; font-size: 13px; font-family: inherit; resize: vertical;"></textarea>
       </div>
 
       <div style="display: flex; gap: 12px;">
         <button type="submit" class="btn btn-primary" [disabled]="!propertyForm.form.valid">
           {{ store.isEditingProperty() ? 'Update Property' : 'Submit Listing' }}
         </button>
-        <button type="button" class="btn btn-secondary" *ngIf="store.isEditingProperty()" (click)="store.cancelEdit()">Cancel Edit</button>
+        <button type="button" class="btn btn-secondary" *ngIf="store.isEditingProperty()"
+          (click)="store.cancelEdit()">Cancel Edit</button>
       </div>
     </form>
   </div>
@@ -84,51 +93,63 @@
   <!-- Properties List Table -->
   <div class="card-glass">
     <h3>Registered Portfolio List</h3>
-    <table class="table-premium">
-      <thead>
-        <tr>
-          <th>Preview</th>
-          <th>Address</th>
-          <th>Location</th>
-          <th>Type</th>
-          <th>Specs</th>
-          <th>Price</th>
-          <th>Status</th>
-          <th *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let p of store.myProperties()" class="fade-in">
-          <td>
-            <img [src]="(p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls[0] : 'assets/villa_sunset.png'" class="table-thumbnail" alt="Property Thumbnail" />
-          </td>
-          <td>
-            <span class="bold">{{ p.address }}</span>
-            <div class="table-description" *ngIf="p.description" style="font-size: 11px; color: var(--text-muted); font-weight: 300; margin-top: 4px; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="p.description">{{ p.description }}</div>
-          </td>
-          <td>{{ p.city }}, {{ p.province }}</td>
-          <td>
-            {{ store.getPropertyTypeName(p.type) }}
-            <span class="status-indicator" [class.bg-blue]="p.listingType === 0" [class.bg-yellow]="p.listingType === 1" style="margin-left: 6px; font-size: 10px;">
-              {{ p.listingType === 1 ? 'Sale' : 'Rent' }}
-            </span>
-          </td>
-          <td>{{ store.getPropertySpecs(p) }} &bull; 📐 {{ p.size | number }} sq ft</td>
-          <td class="bold">
-            ${{ p.monthlyRent | number:'1.2-2' }}
-            <span style="font-size: 10px; color: var(--text-muted); font-weight: 300;">{{ p.listingType === 1 ? '' : '/mo' }}</span>
-          </td>
-          <td>
-            <span class="status-indicator" [class.bg-green]="p.status === 0" [class.bg-blue]="p.status === 1" [class.bg-yellow]="p.status === 2">
-              {{ store.getPropertyStatusName(p.status) }}
-            </span>
-          </td>
-          <td *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
-            <button class="btn btn-secondary btn-sm" (click)="store.editProperty(p)">Edit</button>
-            <button class="btn btn-danger btn-sm" (click)="store.deleteProperty(p.id)">Delete</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div style="overflow-x: auto; width: 100%;">
+      <table class="table-premium">
+        <thead>
+          <tr>
+            <th>Preview</th>
+            <th>Address</th>
+            <th>Location</th>
+            <th>Type</th>
+            <th>Specs</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" style="text-align: center;">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of store.myProperties()" class="fade-in">
+            <td>
+              <img [src]="(p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls[0] : 'assets/villa_sunset.png'"
+                class="table-thumbnail" alt="Property Thumbnail" />
+            </td>
+            <td>
+              <span class="bold">{{ p.address }}</span>
+              <div class="table-description" *ngIf="p.description"
+                style="font-size: 11px; color: var(--text-muted); font-weight: 300; margin-top: 4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                [title]="p.description">{{ p.description }}</div>
+            </td>
+            <td>{{ p.city }}, {{ p.province }}</td>
+            <td>
+              {{ store.getPropertyTypeName(p.type) }}
+              <span class="status-indicator" [class.bg-blue]="p.listingType === 0" [class.bg-yellow]="p.listingType === 1"
+                style="margin-left: 6px; font-size: 10px;">
+                {{ p.listingType === 1 ? 'Sale' : 'Rent' }}
+              </span>
+            </td>
+            <td>{{ store.getPropertySpecs(p) }} &bull; 📐 {{ p.size | number }} sq ft</td>
+            <td class="bold">
+              ${{ p.monthlyRent | number:'1.2-2' }}
+              <span style="font-size: 10px; color: var(--text-muted); font-weight: 300;">{{ p.listingType === 1 ? '' :
+                '/mo' }}</span>
+            </td>
+            <td>
+              <span class="status-indicator" [class.bg-green]="p.status === 0" [class.bg-blue]="p.status === 1"
+                [class.bg-yellow]="p.status === 2">
+                {{ store.getPropertyStatusName(p.status) }}
+              </span>
+            </td>
+            <td *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0">
+              <div style="display: flex; gap: 6px; align-items: center; justify-content: center;">
+                <button class="btn btn-secondary btn-sm" (click)="store.editProperty(p)">Edit</button>
+                <button class="btn btn-danger btn-sm" (click)="store.deleteProperty(p.id)">Delete</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

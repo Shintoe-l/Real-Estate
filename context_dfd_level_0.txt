@@ -1,0 +1,43 @@
+@startuml
+' Layout adjustments for high legibility, clear line separation, and vivid coloring
+skinparam linetype ortho
+skinparam nodesep 120
+skinparam ranksep 100
+
+skinparam ActorBackgroundColor #FFA726
+skinparam ActorBorderColor #FB8C00
+skinparam ActorFontColor #333333
+skinparam ActorFontSize 14
+
+skinparam RectangleBackgroundColor #ECEFF1
+skinparam RectangleBorderColor #607D8B
+skinparam RectangleFontColor #1A237E
+skinparam RectangleFontSize 16
+
+skinparam ArrowColor #1565C0
+skinparam ArrowFontColor #0D47A1
+skinparam ArrowFontSize 11
+
+title DFD Level 0 (Context Diagram) - Real Estate Management System
+
+actor Tenant as "Tenant\n(External User)"
+actor Landlord as "PM / Landlord\n(System Administrator)"
+
+rectangle "0.0 Real Estate Management System\n\n[Core Application Services]" as System
+
+' Left-to-Right layout helps spread out flows clearly
+left to right direction
+
+' Input Flows from Tenant
+Tenant ---> System : 1. Credentials / Login Details\n2. Property Search Queries\n3. Rental Application Form\n4. Payment Authorization\n5. Maintenance Request Ticket
+
+' Output Flows to Tenant
+System ---> Tenant : 1. Authentication Token / Session Cookie\n2. Filtered Properties & Details\n3. Invoices & Receipts\n4. Maintenance Update Statuses
+
+' Input Flows from Landlord
+Landlord ---> System : 1. Auth Credentials\n2. Property Cataloging Data\n3. Application Decisions (Approve/Reject)\n4. Custom Lease Details\n5. Ticket Status Updates
+
+' Output Flows to Landlord
+System ---> Landlord : 1. Auth Token & Profile Details\n2. List of Pending Applications\n3. Transaction Summaries & Payouts\n4. Maintenance Ticket Alerts
+
+@enduml
