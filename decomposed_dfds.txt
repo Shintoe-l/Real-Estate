@@ -1,0 +1,178 @@
+@startuml
+title DFD Level 2 - 1.0 Auth & User Management
+
+actor Tenant
+actor "PM / Landlord" as Landlord
+database DbPersons [
+    <b>DbPersons</b>
+    ----
+    User records
+]
+
+rectangle "1.0 Auth & User Management" {
+    usecase "1.1 Validate Credentials" as 1.1
+    usecase "1.2 Generate Session" as 1.2
+    usecase "1.3 Manage Profile" as 1.3
+}
+
+Tenant --> 1.1 : Username/Password
+Landlord --> 1.1 : Username/Password
+1.1 --> DbPersons : Query Person Data
+DbPersons --> 1.1 : Person Record
+1.1 --> 1.2 : Validated Info
+1.2 --> Tenant : Auth Token / Cookie
+1.2 --> Landlord : Auth Token / Cookie
+Tenant --> 1.3 : Updated Details
+Landlord --> 1.3 : Updated Details
+1.3 --> DbPersons : Update Record
+@enduml
+
+@startuml
+title DFD Level 2 - 2.0 Property Catalog
+
+actor Tenant
+actor "PM / Landlord" as Landlord
+database DbProperties [
+    <b>DbProperties</b>
+    ----
+    Property listings
+]
+
+rectangle "2.0 Property Catalog" {
+    usecase "2.1 Browse & Filter" as 2.1
+    usecase "2.2 Retrieve Details" as 2.2
+    usecase "2.3 Manage Catalog" as 2.3
+}
+
+Tenant --> 2.1 : Search & Filter Criteria
+2.1 --> DbProperties : Select Query
+DbProperties --> 2.1 : Listings Summary
+2.1 --> Tenant : Filtered Listings
+
+Tenant --> 2.2 : Property ID
+2.2 --> DbProperties : Query Details
+DbProperties --> 2.2 : Full Specs & Photos
+2.2 --> Tenant : Detailed View
+
+Landlord --> 2.3 : Property Details (New/Edit)
+2.3 --> DbProperties : Upsert Property Data
+@enduml
+
+@startuml
+title DFD Level 2 - 3.0 Tenancy Application
+
+actor Tenant
+actor "PM / Landlord" as Landlord
+database DbApplications [
+    <b>DbApplications</b>
+]
+database DbProperties [
+    <b>DbProperties</b>
+]
+database DbLeases [
+    <b>DbLeases</b>
+]
+
+rectangle "3.0 Tenancy Application" {
+    usecase "3.1 Submit Application" as 3.1
+    usecase "3.2 Validate Details" as 3.2
+    usecase "3.3 Landlord Decision" as 3.3
+}
+
+Tenant --> 3.1 : Application Info & Docs
+3.1 --> DbApplications : Write Status: Pending
+
+3.2 --> DbApplications : Read Application
+3.2 --> DbProperties : Verify Availability
+DbProperties --> 3.2 : Property Status
+3.2 --> 3.3 : Validation Status
+
+Landlord --> 3.3 : Approval/Rejection
+3.3 --> DbApplications : Update Status
+3.3 --> DbLeases : Create Lease Record (Trigger)
+@enduml
+
+@startuml
+title DFD Level 2 - 4.0 Auto Lease Generation
+
+actor "PM / Landlord" as Landlord
+database DbPersons [
+    <b>DbPersons</b>
+]
+database DbLeases [
+    <b>DbLeases</b>
+]
+
+rectangle "4.0 Auto Lease Generation" {
+    usecase "4.1 Retrieve Application Info" as 4.1
+    usecase "4.2 Construct Lease Agreement" as 4.2
+    usecase "4.3 Finalize Agreement" as 4.3
+}
+
+4.1 --> DbPersons : Fetch Parties Info
+DbPersons --> 4.1 : Tenant/Owner Records
+4.1 --> 4.2 : Entity Details
+Landlord --> 4.2 : Terms & Custom Rules
+4.2 --> 4.3 : Draft Agreement
+4.3 --> DbLeases : Save Signed Lease File
+4.3 --> Landlord : Copy of Lease Contract
+@enduml
+
+@startuml
+title DFD Level 2 - 5.0 Rental Payments
+
+actor Tenant
+actor "PM / Landlord" as Landlord
+database DbLeases [
+    <b>DbLeases</b>
+]
+database DbPayments [
+    <b>DbPayments</b>
+]
+database DbProperties [
+    <b>DbProperties</b>
+]
+
+rectangle "5.0 Rental Payments" {
+    usecase "5.1 Calculate Due Amounts" as 5.1
+    usecase "5.2 Process Transaction" as 5.2
+    usecase "5.3 Record Receipt" as 5.3
+}
+
+5.1 --> DbLeases : Read Active Lease Terms
+DbLeases --> 5.1 : Rent Amount & Due Date
+5.1 --> DbProperties : Read Associated Property
+DbProperties --> 5.1 : Owner Routing Info
+
+5.1 --> 5.2 : Invoice Amount
+Tenant --> 5.2 : Payment Authorization
+5.2 --> 5.3 : Transaction Confirmation
+5.3 --> DbPayments : Write Payment Log
+5.3 --> Landlord : Payout Transaction Confirmed
+@enduml
+
+@startuml
+title DFD Level 2 - 6.0 Maintenance Tracking
+
+actor Tenant
+actor "PM / Landlord" as Landlord
+database DbMaintenanceRequests [
+    <b>DbMaintenanceRequests</b>
+]
+
+rectangle "6.0 Maintenance Tracking" {
+    usecase "6.1 Log Ticket" as 6.1
+    usecase "6.2 Review & Assign" as 6.2
+    usecase "6.3 Resolve Ticket" as 6.3
+}
+
+Tenant --> 6.1 : Description & Urgency
+6.1 --> DbMaintenanceRequests : Write Status: Opened
+
+Landlord --> 6.2 : Update Ticket / Assign Contractor
+6.2 --> DbMaintenanceRequests : Read Ticket Info
+6.2 --> DbMaintenanceRequests : Write Assignment Details
+
+Landlord --> 6.3 : Mark as Completed
+6.3 --> DbMaintenanceRequests : Update Status: Resolved
+@enduml

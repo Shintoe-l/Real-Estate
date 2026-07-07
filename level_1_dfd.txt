@@ -1,0 +1,62 @@
+@startuml
+title DFD Level 1 - Real Estate System Decomposition
+
+actor Tenant
+actor "PM / Landlord" as Landlord
+
+database DbPersons [
+    <b>DbPersons</b>
+]
+database DbProperties [
+    <b>DbProperties</b>
+]
+database DbApplications [
+    <b>DbApplications</b>
+]
+database DbLeases [
+    <b>DbLeases</b>
+]
+database DbPayments [
+    <b>DbPayments</b>
+]
+database DbMaintenanceRequests [
+    <b>DbMaintenanceRequests</b>
+]
+
+rectangle "System Processes" {
+    usecase "1.0 Authenticate & Manage Users" as 1.0
+    usecase "2.0 Browse Property Catalog" as 2.0
+    usecase "3.0 Submit Tenancy Application" as 3.0
+    usecase "4.0 Generate Lease Automatically" as 4.0
+    usecase "5.0 Process Rental Payments" as 5.0
+    usecase "6.0 Track Maintenance Requests" as 6.0
+}
+
+' Tenant Flows
+Tenant --> 1.0 : Authenticate
+Tenant --> 2.0 : Browse Listings
+2.0 --> Tenant : Property List
+Tenant --> 3.0 : Submit Application
+Tenant --> 5.0 : Make Payment
+Tenant --> 6.0 : Request Maintenance
+
+' Landlord Flows
+Landlord --> 4.0 : Authenticate & Generate Lease
+Landlord <--> 5.0 : Manage Property Data
+Landlord --> 6.0 : Approve or Reject Maintenance
+
+' Process to Data Store Interactions
+1.0 --> DbPersons : Read/Write
+4.0 --> DbPersons : Read/Write
+
+2.0 --> DbProperties : Read/Write
+5.0 --> DbProperties : Read
+
+3.0 --> DbApplications : Write Status: Pending
+DbApplications --> 6.0 : Read Application
+DbApplications --> DbLeases : Approved trigger
+
+6.0 --> DbMaintenanceRequests : Write Request
+5.0 --> DbPayments : Write Transaction Log
+
+@enduml

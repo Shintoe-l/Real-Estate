@@ -1,0 +1,39 @@
+@startuml
+title Physical DFD Level 1 - Real Estate Management System (2D)
+
+actor Tenant as "Tenant\n(Web Browser / Angular App)"
+actor Landlord as "PM / Landlord\n(Web Browser / Angular App)"
+
+node "Web Server (Kestrel / ASP.NET Core Web API)" {
+    component "[Controllers]" as API << REST Endpoints >>
+    component "[Repositories]" as Repos << EF Core Data Access >>
+}
+
+database Db [
+    <b>SQL Server Database / InMemory DB</b>
+    ----
+    - Tables: Persons, Properties, Leases, 
+      Payments, MaintenanceRequests, Applications
+]
+
+' Flows with Tenant
+Tenant --> API : HTTPS POST /api/auth/login\n(Credentials)
+Tenant --> API : HTTPS GET /api/properties\n(Search query parameters)
+API --> Tenant : JSON Response\n(HTTP Status 200, Property List)
+Tenant --> API : HTTPS POST /api/applications\n(Application Form DTO / JSON)
+Tenant --> API : HTTPS POST /api/payments\n(Payment DTO)
+Tenant --> API : HTTPS POST /api/maintenancerequests\n(Description DTO)
+
+' Flows with Landlord
+Landlord --> API : HTTPS POST /api/properties\n(New Property DTO / Multi-part Upload)
+Landlord --> API : HTTPS GET /api/applications\n(Pending Applications list)
+Landlord --> API : HTTPS PUT /api/applications/{id}/status\n(Approve/Reject DTO)
+API --> Landlord : JSON Response\n(HTTP Status 200)
+
+' Internal Physical Architecture Connection
+API --> Repos : C# Method Invocation\n(DTO / Domain Model mapping)
+Repos --> Db : ADO.NET / EF Core SQL Commands\n(INSERT, SELECT, UPDATE)
+Db --> Repos : Data Records / Result Sets
+Repos --> API : Domain Entities / Mapping
+
+@enduml

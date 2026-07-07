@@ -70,6 +70,7 @@ namespace RealEstate.Mappers
             if (dto.ListingType != null) property.ListingType = dto.ListingType.Value;
             if (dto.Description != null) property.Description = dto.Description;
             if (dto.Size != null) property.Size = dto.Size.Value;
+            if (dto.ImageUrls != null) property.ImageUrls = dto.ImageUrls;
         }
 
         // ==========================================
