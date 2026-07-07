@@ -4,28 +4,28 @@
 
   <!-- Core Widgets -->
   <div class="widgets-grid">
-    <div class="widget-card">
+    <div class="widget-card" (click)="store.dashboardTab.set('properties')">
       <span class="widget-icon color-blue">🏠</span>
       <div class="widget-data">
         <h3>Properties</h3>
         <p class="number">{{ store.myProperties().length }}</p>
       </div>
     </div>
-    <div class="widget-card">
+    <div class="widget-card" (click)="store.dashboardTab.set('leases')">
       <span class="widget-icon color-green">📜</span>
       <div class="widget-data">
         <h3>Active Leases</h3>
         <p class="number">{{ store.myLeases().length }}</p>
       </div>
     </div>
-    <div class="widget-card">
+    <div class="widget-card" (click)="store.dashboardTab.set('maintenance')">
       <span class="widget-icon color-yellow">🛠️</span>
       <div class="widget-data">
         <h3>Open Requests</h3>
         <p class="number">{{ store.myMaintenanceRequests().length }}</p>
       </div>
     </div>
-    <div class="widget-card">
+    <div class="widget-card" (click)="store.dashboardTab.set('payments')">
       <span class="widget-icon color-purple">💳</span>
       <div class="widget-data">
         <h3>Transactions</h3>

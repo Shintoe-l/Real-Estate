@@ -34,6 +34,8 @@ export class RealEstateStore {
 
   loginData = signal({ email: '', password: '' });
   registerData = signal({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '', role: 2 });
+  showVerificationScreen = signal<boolean>(false);
+  verificationEmail = signal<string>('');
   
   newPropertyData = signal({
     address: '',
@@ -227,13 +229,21 @@ export class RealEstateStore {
         }, 1000);
       },
       error: (err) => {
-        this.authError.set(err.error?.message || 'Invalid credentials. Please try again.');
+        if (err.error?.requiresVerification) {
+          this.verificationEmail.set(err.error.email);
+          this.showVerificationScreen.set(true);
+          this.navigateTo('register');
+          this.authError.set(err.error.message);
+        } else {
+          this.authError.set(err.error?.message || 'Invalid credentials. Please try again.');
+        }
       }
     });
   }
 
   onRegister() {
     this.authError.set('');
+    this.authSuccess.set('');
     
     const payload = {
       ...this.registerData(),
@@ -241,16 +251,56 @@ export class RealEstateStore {
     };
 
     this.apiService.register(payload).subscribe({
-      next: (res) => {
-        this.apiService.setSession(res);
-        this.authSuccess.set('Account created successfully! Redirecting...');
-        setTimeout(() => {
-          this.navigateTo('dashboard');
-          this.registerData.set({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '', role: 2 });
-        }, 1000);
+      next: (res: any) => {
+        this.verificationEmail.set(res.email);
+        this.showVerificationScreen.set(true);
+        this.authSuccess.set('Registration successful! Please enter the confirmation code sent to your email.');
+        this.registerData.update(d => ({ ...d, password: '' }));
       },
       error: (err) => {
         this.authError.set(err.error?.message || 'Error occurred during registration. Please try again.');
+      }
+    });
+  }
+
+  onVerifyEmail(code: string) {
+    this.authError.set('');
+    this.authSuccess.set('');
+    
+    const payload = {
+      email: this.verificationEmail(),
+      code: code
+    };
+
+    this.apiService.verifyEmail(payload).subscribe({
+      next: (res: any) => {
+        this.apiService.setSession(res);
+        this.authSuccess.set('Email verified successfully! Logging you in...');
+        setTimeout(() => {
+          this.showVerificationScreen.set(false);
+          this.navigateTo('dashboard');
+        }, 1000);
+      },
+      error: (err) => {
+        this.authError.set(err.error?.message || 'Verification failed. Please check the code.');
+      }
+    });
+  }
+
+  onResendVerification() {
+    this.authError.set('');
+    this.authSuccess.set('');
+
+    const payload = {
+      email: this.verificationEmail()
+    };
+
+    this.apiService.resendVerification(payload).subscribe({
+      next: (res: any) => {
+        this.authSuccess.set('A new verification code has been sent to your email.');
+      },
+      error: (err) => {
+        this.authError.set(err.error?.message || 'Failed to resend verification code.');
       }
     });
   }

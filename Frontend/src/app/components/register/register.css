@@ -74,3 +74,39 @@
   background-position: right 16px center;
   background-size: 16px;
 }
+
+.password-requirements {
+  margin-top: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.requirement-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--danger);
+  transition: var(--transition);
+}
+
+.requirement-item.met {
+  color: var(--success);
+}
+
+.requirement-item.met .status-dot {
+  background-color: var(--success);
+}

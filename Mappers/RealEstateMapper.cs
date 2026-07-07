@@ -85,7 +85,8 @@ namespace RealEstate.Mappers
                 LastName = person.LastName,
                 Email = person.Email,
                 PhoneNumber = person.PhoneNumber,
-                Role = person.Role
+                Role = person.Role,
+                IsEmailConfirmed = person.IsEmailConfirmed
             };
         }
 

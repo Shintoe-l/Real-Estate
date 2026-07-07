@@ -41,6 +41,14 @@ export class ApiService {
     return this.http.post(`${this.apiUrl}/auth/register`, details);
   }
 
+  verifyEmail(payload: { email: string, code: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/verify-email`, payload);
+  }
+
+  resendVerification(payload: { email: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/resend-verification`, payload);
+  }
+
   // Property API
   getProperties(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/property`);
