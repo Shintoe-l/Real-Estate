@@ -32,9 +32,17 @@
         <span class="amount">${{ property.monthlyRent | number:'1.2-2' }}</span>
         <span class="period">{{ property.listingType === 1 ? ' total' : '/ month' }}</span>
       </div>
-      <button *ngIf="property.status === 0 && store.currentUser()?.role === 2" class="btn btn-sm btn-primary" (click)="store.requestViewing(property)">
-        Request Viewing
-      </button>
+      <ng-container *ngIf="property.status === 0 && store.currentUser()?.role === 2">
+        <button *ngIf="!store.hasPendingOrApprovedViewingRequest(property); else viewingRequestedBadge" 
+          class="btn btn-sm btn-primary" (click)="store.requestViewing(property)">
+          Request Viewing
+        </button>
+        <ng-template #viewingRequestedBadge>
+          <button class="btn btn-sm" disabled style="background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: not-allowed; border: 1px solid var(--border-glass);">
+            ✓ Viewing Requested
+          </button>
+        </ng-template>
+      </ng-container>
     </div>
   </div>
 </div>

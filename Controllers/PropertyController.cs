@@ -29,6 +29,15 @@ namespace RealEstate.Controllers
             return Ok(property.ToPropertyDto());
         }
 
+        /// <summary>Returns all properties belonging to a specific landlord.</summary>
+        [HttpGet("landlord/{landlordId:guid}")]
+        public async Task<IActionResult> GetByLandlord([FromRoute] Guid landlordId)
+        {
+            var properties = await _propertyRepo.GetByLandlordAsync(landlordId);
+            var dtos = properties.Select(p => p.ToPropertyDto());
+            return Ok(dtos);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreatePropertyDto dto)
         {

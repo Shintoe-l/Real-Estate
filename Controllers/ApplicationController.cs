@@ -34,6 +34,29 @@ namespace RealEstate.Controllers
             return Ok(app.ToApplicationDto());
         }
 
+        /// <summary>Returns all applications submitted by a specific tenant.</summary>
+        [HttpGet("tenant/{tenantId:guid}")]
+        public async Task<IActionResult> GetByTenant([FromRoute] Guid tenantId)
+        {
+            var apps = await _appRepo.GetByTenantAsync(tenantId);
+            var dtos = apps.Select(a => a.ToApplicationDto());
+            return Ok(dtos);
+        }
+
+        /// <summary>Returns all applications for a landlord's properties (comma-separated property IDs).</summary>
+        [HttpGet("by-properties")]
+        public async Task<IActionResult> GetByPropertyIds([FromQuery] string propertyIds)
+        {
+            var ids = propertyIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(s => Guid.TryParse(s.Trim(), out var g) ? g : (Guid?)null)
+                                 .Where(g => g.HasValue)
+                                 .Select(g => g!.Value)
+                                 .ToList();
+            var apps = await _appRepo.GetByPropertyIdsAsync(ids);
+            var dtos = apps.Select(a => a.ToApplicationDto());
+            return Ok(dtos);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateApplicationDto dto)
         {
@@ -62,37 +85,51 @@ namespace RealEstate.Controllers
             app.Status = dto.Status;
             await _appRepo.UpdateStatusAsync(id, dto.Status);
 
-                // If approved, perform automated operations based on application type
-                if (dto.Status == ApplicationStatus.Approved)
-                {
-                    var property = await _propertyRepo.GetByIdAsync(app.PropertyId);
-                    if (property != null)
-                    {
-                        // For Rental applications, mark property occupied and create lease
-                        if (app.Type == ApplicationType.Rental)
-                        {
-                            // 1. Mark property occupied
-                            property.Status = PropertyStatus.Occupied;
-                            await _propertyRepo.UpdateAsync(property.Id, property);
+                 // If approved or acquired, perform automated operations based on application type
+                 if (dto.Status == ApplicationStatus.Approved)
+                 {
+                     // For Rental applications, no lease is created yet until payment is verified (Acquired status)
+                     // For ViewingRequest, no action needed here.
+                 }
+                 else if (dto.Status == ApplicationStatus.Acquired)
+                 {
+                     var property = await _propertyRepo.GetByIdAsync(app.PropertyId);
+                     if (property != null)
+                     {
+                         // Mark property status based on application type
+                         if (app.Type == ApplicationType.Purchase)
+                         {
+                             // Purchase = property is now Sold
+                             property.Status = PropertyStatus.Sold;
+                             await _propertyRepo.UpdateAsync(property.Id, property);
+                         }
+                         else if (app.Type == ApplicationType.Rental)
+                         {
+                             // Rental = property is now Occupied (rented)
+                             property.Status = PropertyStatus.Occupied;
+                             await _propertyRepo.UpdateAsync(property.Id, property);
 
-                            // 2. Automatically create a Lease Agreement
-                            var lease = new Lease
-                            {
-                                Id = Guid.NewGuid(),
-                                PropertyId = app.PropertyId,
-                                TenantId = app.TenantId,
-                                StartDate = DateTime.UtcNow,
-                                EndDate = DateTime.UtcNow.AddYears(1),
-                                MonthlyRent = property.MonthlyRent,
-                                SecurityDeposit = property.MonthlyRent,
-                                IsActive = true
-                            };
-                            await _leaseRepo.CreateAsync(lease);
-                        }
-                        // For ViewingRequest, no property status change or lease creation needed
-                        // For Purchase, additional handling could be added later
-                    }
-                }
+                             // Create lease agreement if not already created
+                             var existingLeases = await _leaseRepo.GetByTenantAsync(app.TenantId);
+                             var hasLease = existingLeases.Any(l => l.PropertyId == app.PropertyId);
+                             if (!hasLease)
+                             {
+                                 var lease = new Lease
+                                 {
+                                     Id = Guid.NewGuid(),
+                                     PropertyId = app.PropertyId,
+                                     TenantId = app.TenantId,
+                                     StartDate = DateTime.UtcNow,
+                                     EndDate = DateTime.UtcNow.AddYears(1),
+                                     MonthlyRent = property.MonthlyRent,
+                                     SecurityDeposit = property.MonthlyRent,
+                                     IsActive = true
+                                 };
+                                 await _leaseRepo.CreateAsync(lease);
+                             }
+                         }
+                     }
+                 }
 
             return Ok(app.ToApplicationDto());
         }

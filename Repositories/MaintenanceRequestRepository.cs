@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using RealEstate.Data;
@@ -18,6 +19,20 @@ namespace RealEstate.Repositories
         public async Task<MaintenanceRequest?> GetByIdAsync(Guid id)
         {
             return await _context.MaintenanceRequests.FirstOrDefaultAsync(m => m.Id == id);
+        }
+
+        public async Task<List<MaintenanceRequest>> GetByTenantAsync(Guid tenantId)
+        {
+            return await _context.MaintenanceRequests
+                .Where(m => m.TenantId == tenantId)
+                .ToListAsync();
+        }
+
+        public async Task<List<MaintenanceRequest>> GetByPropertyIdsAsync(IEnumerable<Guid> propertyIds)
+        {
+            return await _context.MaintenanceRequests
+                .Where(m => propertyIds.Contains(m.PropertyId))
+                .ToListAsync();
         }
 
         public async Task<MaintenanceRequest> CreateAsync(MaintenanceRequest request)

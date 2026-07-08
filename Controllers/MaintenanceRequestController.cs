@@ -28,6 +28,29 @@ namespace RealEstate.Controllers
             return Ok(request.ToMaintenanceRequestDto());
         }
 
+        /// <summary>Returns all maintenance requests raised by a specific tenant.</summary>
+        [HttpGet("tenant/{tenantId:guid}")]
+        public async Task<IActionResult> GetByTenant([FromRoute] Guid tenantId)
+        {
+            var requests = await _maintenanceRepo.GetByTenantAsync(tenantId);
+            var dtos = requests.Select(r => r.ToMaintenanceRequestDto());
+            return Ok(dtos);
+        }
+
+        /// <summary>Returns all maintenance requests for a given set of property IDs.</summary>
+        [HttpGet("by-properties")]
+        public async Task<IActionResult> GetByPropertyIds([FromQuery] string propertyIds)
+        {
+            var ids = propertyIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(s => Guid.TryParse(s.Trim(), out var g) ? g : (Guid?)null)
+                                 .Where(g => g.HasValue)
+                                 .Select(g => g!.Value)
+                                 .ToList();
+            var requests = await _maintenanceRepo.GetByPropertyIdsAsync(ids);
+            var dtos = requests.Select(r => r.ToMaintenanceRequestDto());
+            return Ok(dtos);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateMaintenanceRequestDto dto)
         {

@@ -9,6 +9,7 @@ namespace RealEstate.Interfaces
     {
         Task<List<Payment>> GetAllAsync();
         Task<Payment?> GetByIdAsync(Guid id);
+        Task<List<Payment>> GetByLeaseIdsAsync(IEnumerable<Guid> leaseIds);
         Task<Payment> CreateAsync(Payment payment);
         Task<Payment?> UpdateAsync(Guid id, Payment payment);
         Task<Payment?> DeleteAsync(Guid id);

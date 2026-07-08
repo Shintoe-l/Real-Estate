@@ -22,6 +22,12 @@ export class RealEstateStore {
   maintenanceRequests = signal<any[]>([]);
   applications = signal<any[]>([]);
 
+  // Server-computed lease summary (stored in DB, calculated server-side)
+  tenantLeaseSummary = signal<{ activeLeaseCount: number; totalMonthlyObligation: number } | null>(null);
+
+  // Server-computed transactions total (calculated server-side in DB)
+  dbTotalPayments = signal<number>(0);
+
   // Search Filter State
   searchCity = signal('');
   searchBedrooms = signal('');
@@ -76,7 +82,13 @@ export class RealEstateStore {
     const role = user.role;
     if (role === 0) return this.properties(); // Admin sees all
     if (role === 1 || role === 3) return this.properties().filter(p => p.landlordId === user.id); // Landlord / PM see owned
-    if (role === 2) return this.properties().filter(p => this.leases().some(l => l.propertyId === p.id && l.tenantId === user.id)); // Tenant sees leased
+    if (role === 2) {
+      // Tenant sees leased properties OR properties they have acquired via approved payment
+      return this.properties().filter(p => 
+        this.leases().some(l => l.propertyId === p.id && l.tenantId === user.id) ||
+        this.applications().some(a => a.propertyId === p.id && a.tenantId === user.id && a.status === 3)
+      );
+    }
     return [];
   });
 
@@ -90,6 +102,10 @@ export class RealEstateStore {
     return [];
   });
 
+  myTotalMonthlyObligation = computed(() => {
+    return this.myLeases().reduce((sum, lease) => sum + (lease.monthlyRent || 0), 0);
+  });
+
   myPayments = computed(() => {
     const user = this.currentUser();
     if (!user) return [];
@@ -100,6 +116,10 @@ export class RealEstateStore {
       return this.payments().filter(p => allowedLeaseIds.has(p.leaseId));
     }
     return [];
+  });
+
+  myTotalPayments = computed(() => {
+    return this.dbTotalPayments();
   });
 
   myMaintenanceRequests = computed(() => {
@@ -177,32 +197,122 @@ export class RealEstateStore {
   }
 
   loadDashboardData() {
-    this.fetchProperties();
-    
-    this.apiService.getLeases().subscribe({
-      next: (data) => this.leases.set(data),
-      error: (err) => console.error('Error fetching leases', err)
-    });
-    
-    this.apiService.getPayments().subscribe({
-      next: (data) => this.payments.set(data),
-      error: (err) => console.error('Error fetching payments', err)
-    });
+    const user = this.currentUser();
+    if (!user) return;
 
-    this.apiService.getMaintenanceRequests().subscribe({
-      next: (data) => this.maintenanceRequests.set(data),
-      error: (err) => console.error('Error fetching maintenance', err)
-    });
-
-    this.apiService.getApplications().subscribe({
-      next: (data) => this.applications.set(data),
-      error: (err) => console.error('Error fetching applications', err)
-    });
-
-    if (this.currentUser()?.role === 0) {
+    if (user.role === 0) {
+      // ── Admin: fetch everything ──────────────────────────────────────────
+      this.apiService.getProperties().subscribe({
+        next: (data) => this.properties.set(data.map((p: any) => ({ ...p, currentImageIndex: 0 }))),
+        error: (err) => console.error('Error fetching properties', err)
+      });
+      this.apiService.getLeases().subscribe({
+        next: (data) => this.leases.set(data),
+        error: (err) => console.error('Error fetching leases', err)
+      });
+      this.apiService.getPayments().subscribe({
+        next: (data) => this.payments.set(data),
+        error: (err) => console.error('Error fetching payments', err)
+      });
+      this.apiService.getMaintenanceRequests().subscribe({
+        next: (data) => this.maintenanceRequests.set(data),
+        error: (err) => console.error('Error fetching maintenance', err)
+      });
+      this.apiService.getApplications().subscribe({
+        next: (data) => this.applications.set(data),
+        error: (err) => console.error('Error fetching applications', err)
+      });
       this.apiService.getPeople().subscribe({
         next: (data) => this.people.set(data),
         error: (err) => console.error('Error fetching people', err)
+      });
+
+    } else if (user.role === 1) {
+      // ── Landlord: fetch properties they own, then chain secondary fetches ──
+      this.apiService.getPropertiesByLandlord(user.id).subscribe({
+        next: (data) => {
+          this.properties.set(data.map((p: any) => ({ ...p, currentImageIndex: 0 })));
+          const propIds = data.map((p: any) => p.id as string);
+          if (propIds.length === 0) return;
+
+          // Leases for those properties
+          this.apiService.getLeases().subscribe({
+            next: (leases) => {
+              const filtered = leases.filter((l: any) => propIds.includes(l.propertyId));
+              this.leases.set(filtered);
+              const leaseIds = filtered.map((l: any) => l.id as string);
+
+              // Payments for those leases
+              if (leaseIds.length > 0) {
+                this.apiService.getPaymentsByLeaseIds(leaseIds).subscribe({
+                  next: (p) => this.payments.set(p),
+                  error: (err) => console.error('Error fetching landlord payments', err)
+                });
+                this.apiService.getPaymentsSummary(leaseIds).subscribe({
+                  next: (summary) => this.dbTotalPayments.set(summary.totalAmount || 0),
+                  error: (err) => console.error('Error fetching landlord payments summary', err)
+                });
+              }
+            },
+            error: (err) => console.error('Error fetching landlord leases', err)
+          });
+
+          // Maintenance requests for those properties
+          this.apiService.getMaintenanceByPropertyIds(propIds).subscribe({
+            next: (data) => this.maintenanceRequests.set(data),
+            error: (err) => console.error('Error fetching landlord maintenance', err)
+          });
+
+          // Applications for those properties
+          this.apiService.getApplicationsByPropertyIds(propIds).subscribe({
+            next: (data) => this.applications.set(data),
+            error: (err) => console.error('Error fetching landlord applications', err)
+          });
+        },
+        error: (err) => console.error('Error fetching landlord properties', err)
+      });
+
+    } else if (user.role === 2) {
+      // ── Tenant: fetch all data scoped to their ID ─────────────────────────
+      // Keep browsable properties available (all properties for browsing)
+      this.fetchProperties();
+
+      // Leases directly from DB by tenant
+      this.apiService.getLeasesByTenant(user.id).subscribe({
+        next: (leases) => {
+          this.leases.set(leases);
+          // Payments for those leases
+          const leaseIds = leases.map((l: any) => l.id as string);
+          if (leaseIds.length > 0) {
+            this.apiService.getPaymentsByLeaseIds(leaseIds).subscribe({
+              next: (p) => this.payments.set(p),
+              error: (err) => console.error('Error fetching tenant payments', err)
+            });
+            this.apiService.getPaymentsSummary(leaseIds).subscribe({
+              next: (summary) => this.dbTotalPayments.set(summary.totalAmount || 0),
+              error: (err) => console.error('Error fetching tenant payments summary', err)
+            });
+          }
+        },
+        error: (err) => console.error('Error fetching tenant leases', err)
+      });
+
+      // DB-computed lease summary (totalMonthlyObligation)
+      this.apiService.getTenantLeaseSummary(user.id).subscribe({
+        next: (summary) => this.tenantLeaseSummary.set(summary),
+        error: (err) => console.error('Error fetching tenant lease summary', err)
+      });
+
+      // Maintenance requests by tenant
+      this.apiService.getMaintenanceByTenant(user.id).subscribe({
+        next: (data) => this.maintenanceRequests.set(data),
+        error: (err) => console.error('Error fetching tenant maintenance', err)
+      });
+
+      // Applications by tenant
+      this.apiService.getApplicationsByTenant(user.id).subscribe({
+        next: (data) => this.applications.set(data),
+        error: (err) => console.error('Error fetching tenant applications', err)
       });
     }
   }
@@ -547,6 +657,101 @@ export class RealEstateStore {
     });
   }
 
+  proceedAfterViewing(app: any, type: number) {
+    // type: 0 = Rent, 1 = Purchase, 2 = Not Interested (reject the application)
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    if (type === 2) {
+      // Tenant chose "Not Interested" - reject the viewing application
+      this.apiService.updateApplicationStatus(app.id, 2).subscribe({
+        next: () => {
+          this.dashboardSuccess.set('You have declined the property. No further action needed.');
+          this.loadDashboardData();
+        },
+        error: () => {
+          this.dashboardError.set('Failed to update application.');
+        }
+      });
+      return;
+    }
+
+    // Submit a new Rental (0) or Purchase (1) application for the same property
+    const payload = {
+      propertyId: app.propertyId,
+      tenantId: this.currentUser().id,
+      type: type
+    };
+
+    // First update the viewing application status to 3 (Acquired / Completed) to disable the action buttons
+    this.apiService.updateApplicationStatus(app.id, 3).subscribe({
+      next: () => {
+        this.apiService.createApplication(payload).subscribe({
+          next: () => {
+            const label = type === 0 ? 'Rental' : 'Purchase';
+            this.dashboardSuccess.set(`${label} application submitted! The owner will review it.`);
+            this.loadDashboardData();
+          },
+          error: (err) => {
+            this.dashboardError.set(err.error?.message || 'Failed to submit application.');
+          }
+        });
+      },
+      error: () => {
+        this.dashboardError.set('Failed to update viewing application status.');
+      }
+    });
+  }
+  submitPaymentFromApplication(app: any, amount: number, methodLabel: string, reference: string) {
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    // Update Application Status to Acquired (3)
+    this.apiService.updateApplicationStatus(app.id, 3).subscribe({
+      next: () => {
+        // Fetch latest leases so we get the newly created lease from the backend
+        this.apiService.getLeasesByTenant(this.currentUser().id).subscribe({
+          next: (leases) => {
+            this.leases.set(leases);
+            const lease = leases.find((l: any) => l.propertyId === app.propertyId);
+            const leaseId = lease?.id;
+
+            if (!leaseId) {
+              this.dashboardSuccess.set(`✅ Receipt submitted! Reference: ${reference}. Status updated to Acquired.`);
+              this.loadDashboardData();
+              return;
+            }
+
+            const payload = {
+              leaseId,
+              amount: Number(amount) || 0,
+              type: 0, // Rent Payment
+              paymentDate: new Date().toISOString()
+            };
+
+            this.apiService.createPayment(payload).subscribe({
+              next: () => {
+                this.dashboardSuccess.set(`✅ Payment of $${amount} via ${methodLabel} submitted. Ref: ${reference}. Status updated to Acquired!`);
+                this.loadDashboardData();
+              },
+              error: () => {
+                this.dashboardError.set('Payment registration in ledger failed, but application status updated.');
+                this.loadDashboardData();
+              }
+            });
+          },
+          error: () => {
+             this.dashboardSuccess.set(`✅ Status updated to Acquired, but could not fetch lease to record payment.`);
+             this.loadDashboardData();
+          }
+        });
+      },
+      error: () => {
+        this.dashboardError.set('Failed to update application status to Acquired.');
+      }
+    });
+  }
+
   // Utility Getters
   getRoleName(role: number): string {
     switch (role) {
@@ -584,6 +789,8 @@ export class RealEstateStore {
       case 0: return 'Available';
       case 1: return 'Rented';
       case 2: return 'Maintenance';
+      case 3: return 'Off Market';
+      case 4: return 'Sold';
       default: return 'Available';
     }
   }
@@ -621,6 +828,7 @@ export class RealEstateStore {
       case 0: return 'Pending';
       case 1: return 'Approved';
       case 2: return 'Rejected';
+      case 3: return 'Acquired';
       default: return 'Pending';
     }
   }
@@ -636,5 +844,22 @@ export class RealEstateStore {
       default:
         return 'Rental';
     }
+  }
+
+  getAcquiredApplicationForProperty(property: any) {
+    return this.myApplications().find(a => a.propertyId === property.id && a.status === 3 && (a.type === 0 || a.type === 1)) || null;
+  }
+
+  hasPendingOrApprovedViewingRequest(property: any): boolean {
+    return this.myApplications().some(a => 
+      a.propertyId === property.id && 
+      a.type === 2 && 
+      (a.status === 0 || a.status === 1 || a.status === 3)
+    );
+  }
+
+  getPropertyListingType(propertyId: string): number {
+    const p = this.properties().find(prop => prop.id === propertyId);
+    return p ? p.listingType : 0; // default to 0 (Rent) if not found
   }
 }

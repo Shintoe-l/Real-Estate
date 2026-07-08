@@ -59,6 +59,17 @@
           </td>
         </tr>
       </tbody>
+      <tfoot style="border-top: 2px solid var(--border-glass);" *ngIf="store.myPayments().length > 0">
+        <tr>
+          <td colspan="2" class="bold" style="text-align: right; padding: 14px 16px; color: var(--text-secondary);">
+            Total Transactions <span style="font-size: 10px; font-weight: 400;">(from DB)</span>:
+          </td>
+          <td class="bold color-green" style="padding: 14px 16px; font-size: 15px;">
+            ${{ store.myTotalPayments() | number:'1.2-2' }}
+          </td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
     </table>
     <div *ngIf="store.myPayments().length === 0" class="empty-state">
       <p>No transaction history recorded yet.</p>

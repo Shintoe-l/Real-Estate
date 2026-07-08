@@ -1,56 +1,89 @@
 <div class="tab-pane fade-in">
   <!-- Tenant View: Send Applications list -->
   <div *ngIf="store.currentUser().role === 2" class="card-glass">
-    <h3>📋 My Sent Rental & Purchase Applications</h3>
-    <table class="table-premium">
-      <thead>
-        <tr>
-          <th>Application ID</th>
-          <th>Property ID</th>
-          <th>Type</th>
-          <th>Date Applied</th>
-          <th>Status</th>
-          <th>Owner Feedback</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let a of store.myApplications()" class="fade-in">
-          <td class="code">{{ a.id.substring(0,8) }}...</td>
-          <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
-          <td>
-            <span class="status-indicator bg-blue">
-              {{ store.getApplicationTypeName(a.type) }}
-            </span>
-          </td>
-          <td>{{ a.appliedDate | date:'mediumDate' }}</td>
-          <td>
-            <span class="status-indicator" [class.bg-yellow]="a.status === 0" [class.bg-green]="a.status === 1" [class.bg-danger]="a.status === 2">
-              {{ store.getApplicationStatusName(a.status) }}
-            </span>
-          </td>
-          <td>
-            <span *ngIf="a.status === 0" class="text-italic" style="color: var(--text-muted); font-size: 12px;">
-              ⏳ Waiting for response from property owner
-            </span>
-            <ng-container *ngIf="a.status === 1">
-              <ng-container *ngIf="a.type === 2">
-                <span class="bold color-green" style="font-size: 12px;">
-                  ✅ Viewing approved
-                </span>
+    <h3>📋 My Sent Rental &amp; Purchase Applications</h3>
+    <div style="overflow-x: auto; width: 100%;">
+      <table class="table-premium">
+        <thead>
+          <tr>
+            <th>Application ID</th>
+            <th>Property ID</th>
+            <th>Type</th>
+            <th>Date Applied</th>
+            <th>Status</th>
+            <th>Owner Feedback &amp; Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of store.myApplications()" class="fade-in">
+            <td class="code">{{ a.id.substring(0,8) }}...</td>
+            <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
+            <td>
+              <span class="status-indicator bg-blue">{{ store.getApplicationTypeName(a.type) }}</span>
+            </td>
+            <td>{{ a.appliedDate | date:'mediumDate' }}</td>
+            <td>
+              <span class="status-indicator"
+                [class.bg-yellow]="a.status === 0"
+                [class.bg-green]="a.status === 1"
+                [class.bg-danger]="a.status === 2"
+                [class.bg-success]="a.status === 3"
+                style="background: var(--bg-success-acquired); color: var(--text-success-acquired);">
+                {{ a.status === 3 ? (a.type === 2 ? 'Completed' : 'Acquired') : store.getApplicationStatusName(a.status) }}
+              </span>
+            </td>
+            <td>
+              <!-- Pending -->
+              <span *ngIf="a.status === 0" style="color: var(--text-muted); font-size: 12px;">
+                ⏳ Waiting for property owner response
+              </span>
+
+              <!-- Approved Viewing Request: Rent / Buy / Not Interested -->
+              <ng-container *ngIf="a.status === 1 && a.type === 2">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <span style="font-size: 11px; color: var(--text-secondary);">✅ Viewing approved! How would you like to proceed?</span>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button *ngIf="store.getPropertyListingType(a.propertyId) === 0" class="btn btn-sm" (click)="store.proceedAfterViewing(a, 0)"
+                      style="background: linear-gradient(135deg, #11998e, #38ef7d); color: #000;">🏠 Rent</button>
+                    <button *ngIf="store.getPropertyListingType(a.propertyId) === 1" class="btn btn-sm" (click)="store.proceedAfterViewing(a, 1)"
+                      style="background: linear-gradient(135deg, #f7971e, #ffd200); color: #000;">🛒 Buy</button>
+                    <button class="btn btn-sm btn-danger" (click)="store.proceedAfterViewing(a, 2)">❌ Not Interested</button>
+                  </div>
+                </div>
               </ng-container>
-              <ng-container *ngIf="a.type !== 2">
-                <span class="bold color-green" style="font-size: 12px;">
-                  ✅ Approved! Contract established.
-                </span>
+
+              <!-- Approved Rental or Purchase: Make Payment / Upload Receipt -->
+              <ng-container *ngIf="a.status === 1 && (a.type === 0 || a.type === 1)">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <span style="font-size: 11px; color: #34d399; font-weight: 600;">
+                    ✅ {{ a.type === 0 ? 'Rental' : 'Purchase' }} approved! Please proceed with payment.
+                  </span>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn btn-sm btn-primary" (click)="openPaymentModal(a)">💳 Make Payment</button>
+                    <button class="btn btn-sm btn-secondary" (click)="openReceiptModal(a)">📄 Upload Receipt</button>
+                  </div>
+                </div>
               </ng-container>
-            </ng-container>
-            <span *ngIf="a.status === 2" class="color-red" style="font-size: 12px;">
-              ❌ Application declined by owner.
-            </span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+
+              <!-- Rejected -->
+              <span *ngIf="a.status === 2" style="color: var(--danger); font-size: 12px;">
+                ❌ Application declined by owner.
+              </span>
+
+              <!-- Acquired (Status 3) -->
+              <span *ngIf="a.status === 3">
+                <span *ngIf="a.type === 2" style="color: var(--text-muted); font-size: 12px; font-style: italic;">
+                  ✅ Viewing request processed.
+                </span>
+                <span *ngIf="a.type !== 2" style="color: #34d399; font-size: 12px; font-weight: bold;">
+                  🎉 Property acquired! Payment verified.
+                </span>
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     <div *ngIf="store.myApplications().length === 0" class="empty-state">
       <p>You have not submitted any applications yet.</p>
     </div>
@@ -59,50 +92,176 @@
   <!-- Landlord/PM View: Received Applications list -->
   <div *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" class="card-glass">
     <h3>📋 Received Applications for My Properties</h3>
-    <table class="table-premium">
-      <thead>
-        <tr>
-          <th>Application ID</th>
-          <th>Property ID</th>
-          <th>Applicant ID</th>
-          <th>Application Type</th>
-          <th>Applied Date</th>
-          <th>Status</th>
-          <th style="text-align: right;">Review Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let a of store.myApplications()" class="fade-in">
-          <td class="code">{{ a.id.substring(0,8) }}...</td>
-          <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
-          <td class="code">{{ a.tenantId.substring(0,8) }}...</td>
-          <td>
-            <span class="status-indicator bg-blue">
-              {{ store.getApplicationTypeName(a.type) }}
-            </span>
-          </td>
-          <td>{{ a.appliedDate | date:'mediumDate' }}</td>
-          <td>
-            <span class="status-indicator" [class.bg-yellow]="a.status === 0" [class.bg-green]="a.status === 1" [class.bg-danger]="a.status === 2">
-              {{ store.getApplicationStatusName(a.status) }}
-            </span>
-          </td>
-          <td style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-            <ng-container *ngIf="a.status === 0; else actionedState">
-              <button class="btn btn-sm btn-primary" (click)="store.approveApplication(a)">Approve</button>
-              <button class="btn btn-sm btn-danger" (click)="store.rejectApplication(a)">Reject</button>
-            </ng-container>
-            <ng-template #actionedState>
-              <span class="text-italic" style="color: var(--text-muted); font-size: 12px;">
-                Processed
+    <div style="overflow-x: auto; width: 100%;">
+      <table class="table-premium">
+        <thead>
+          <tr>
+            <th>Application ID</th>
+            <th>Property ID</th>
+            <th>Applicant ID</th>
+            <th>Application Type</th>
+            <th>Applied Date</th>
+            <th>Status</th>
+            <th style="text-align: right;">Review Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of store.myApplications()" class="fade-in">
+            <td class="code">{{ a.id.substring(0,8) }}...</td>
+            <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
+            <td class="code">{{ a.tenantId.substring(0,8) }}...</td>
+            <td>
+              <span class="status-indicator bg-blue">{{ store.getApplicationTypeName(a.type) }}</span>
+            </td>
+            <td>{{ a.appliedDate | date:'mediumDate' }}</td>
+            <td>
+              <span class="status-indicator"
+                [class.bg-yellow]="a.status === 0"
+                [class.bg-green]="a.status === 1"
+                [class.bg-danger]="a.status === 2"
+                [class.bg-success]="a.status === 3"
+                style="background: var(--bg-success-acquired); color: var(--text-success-acquired);">
+                {{ a.status === 3 ? (a.type === 1 ? 'Sold' : (a.type === 2 ? 'Completed' : 'Rented')) : store.getApplicationStatusName(a.status) }}
               </span>
-            </ng-template>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </td>
+            <td>
+              <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                <ng-container *ngIf="a.status === 0">
+                  <button class="btn btn-sm btn-primary" (click)="store.approveApplication(a)">Approve</button>
+                  <button class="btn btn-sm btn-danger" (click)="store.rejectApplication(a)">Reject</button>
+                </ng-container>
+                <ng-container *ngIf="a.status === 1">
+                  <span style="color: var(--text-muted); font-size: 12px;">Approved (Awaiting Payment)</span>
+                </ng-container>
+                <ng-container *ngIf="a.status === 2">
+                  <span style="color: var(--danger); font-size: 12px;">Rejected</span>
+                </ng-container>
+                <ng-container *ngIf="a.status === 3">
+                  <span style="color: #34d399; font-size: 12px; font-weight: bold;">
+                    🎉 {{ a.type === 1 ? 'Sold' : (a.type === 2 ? 'Completed' : 'Rented') }}
+                  </span>
+                </ng-container>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     <div *ngIf="store.myApplications().length === 0" class="empty-state">
       <p>No pending applications received.</p>
     </div>
   </div>
+
+  <!-- ===================== PAYMENT MODAL ===================== -->
+  <div *ngIf="showPaymentModal" class="modal-backdrop" (click)="closeModals()">
+    <div class="modal-card fade-in" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>💳 Make Payment</h3>
+        <button class="modal-close" (click)="closeModals()">✕</button>
+      </div>
+
+      <form (submit)="submitPayment()">
+        <div class="form-group">
+          <label>Amount (USD $)</label>
+          <input type="number" name="amount" [(ngModel)]="paymentData.amount" min="1" required placeholder="e.g. 350.00" />
+        </div>
+
+        <div class="form-group">
+          <label>Select Payment Method</label>
+          <div class="payment-method-grid">
+            <div *ngFor="let m of paymentMethods"
+              class="payment-method-card"
+              [class.selected]="paymentData.method === m.id"
+              (click)="paymentData.method = m.id">
+              <span class="method-icon">{{ m.icon }}</span>
+              <span class="method-label">{{ m.label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <ng-container *ngIf="paymentData.method">
+          <div class="form-group" *ngIf="isMobileMethod()">
+            <label>{{ selectedMethod?.hint }}</label>
+            <input type="text" name="phoneNumber" [(ngModel)]="paymentData.phoneNumber"
+              placeholder="07X XXX XXXX" required />
+          </div>
+
+          <ng-container *ngIf="isBankMethod()">
+            <div class="form-group">
+              <label>Account Name</label>
+              <input type="text" name="accountName" [(ngModel)]="paymentData.accountName"
+                placeholder="Full Name on Account" required />
+            </div>
+            <div class="form-group">
+              <label>Bank / Transaction Reference</label>
+              <input type="text" name="referenceNumber" [(ngModel)]="paymentData.referenceNumber"
+                placeholder="e.g. ZB-2026-12345" required />
+            </div>
+          </ng-container>
+
+          <div class="modal-notice">
+            <span>📋</span>
+            <span *ngIf="isMobileMethod()">
+              Send payment to <strong>EcoCash 0772 123 456</strong> (AP Properties), then enter your number above to confirm.
+            </span>
+            <span *ngIf="isBankMethod()">
+              Transfer to <strong>CBZ Bank • AP Properties Ltd • Acc: 12345678</strong>, then enter your reference above.
+            </span>
+          </div>
+        </ng-container>
+
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button type="submit" class="btn btn-primary"
+            [disabled]="!paymentData.method || !paymentData.amount">
+            ✅ Confirm &amp; Submit
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== RECEIPT MODAL ===================== -->
+  <div *ngIf="showReceiptModal" class="modal-backdrop" (click)="closeModals()">
+    <div class="modal-card fade-in" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📄 Upload Payment Receipt</h3>
+        <button class="modal-close" (click)="closeModals()">✕</button>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+        If you already made payment via EcoCash, bank transfer, or any other method, enter the transaction reference here.
+      </p>
+
+      <form (submit)="submitReceipt()">
+        <div class="form-group">
+          <label>Payment Method Used</label>
+          <select name="receiptMethod" [(ngModel)]="receiptData.method" required>
+            <option value="">Select method...</option>
+            <option *ngFor="let m of paymentMethods" [value]="m.label">{{ m.icon }} {{ m.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Transaction Reference Number</label>
+          <input type="text" name="refNumber" [(ngModel)]="receiptData.referenceNumber"
+            placeholder="e.g. ECO2026071234 or ZB-12345" required />
+        </div>
+
+        <div class="form-group">
+          <label>Additional Notes (optional)</label>
+          <input type="text" name="note" [(ngModel)]="receiptData.note" placeholder="Any notes for the landlord" />
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button type="submit" class="btn btn-primary"
+            [disabled]="!receiptData.referenceNumber || !receiptData.method">
+            📤 Submit Receipt
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+

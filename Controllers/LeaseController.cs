@@ -28,6 +28,36 @@ namespace RealEstate.Controllers
             return Ok(lease.ToLeaseDto());
         }
 
+        /// <summary>
+        /// Returns all active leases for a specific tenant directly from the database.
+        /// </summary>
+        [HttpGet("tenant/{tenantId:guid}")]
+        public async Task<IActionResult> GetByTenant([FromRoute] Guid tenantId)
+        {
+            var leases = await _leaseRepo.GetByTenantAsync(tenantId);
+            var dtos = leases.Select(l => l.ToLeaseDto());
+            return Ok(dtos);
+        }
+
+        /// <summary>
+        /// Returns total monthly rent obligation for a specific tenant, calculated from the database.
+        /// </summary>
+        [HttpGet("tenant/{tenantId:guid}/summary")]
+        public async Task<IActionResult> GetTenantSummary([FromRoute] Guid tenantId)
+        {
+            var tenantLeases = await _leaseRepo.GetByTenantAsync(tenantId);
+
+            var totalMonthlyObligation = tenantLeases.Sum(l => l.MonthlyRent);
+            var activeLeaseCount = tenantLeases.Count;
+
+            return Ok(new
+            {
+                tenantId,
+                activeLeaseCount,
+                totalMonthlyObligation
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateLeaseDto dto)
         {

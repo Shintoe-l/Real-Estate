@@ -1,7 +1,145 @@
 <div class="tab-pane fade-in">
+
+  <!-- Summary Category Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+
+    <!-- Available -->
+    <div class="card-glass" style="text-align: center; padding: 20px; border-left: 3px solid #38ef7d; cursor: pointer;"
+      (click)="filterStatus = filterStatus === 0 ? null : 0"
+      [style.opacity]="filterStatus !== null && filterStatus !== 0 ? '0.45' : '1'">
+      <div style="font-size: 32px; margin-bottom: 6px;">🟢</div>
+      <div style="font-size: 28px; font-weight: 800; color: #38ef7d; line-height: 1;">
+        {{ store.myProperties().filter(p => p.status === 0).length }}
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; letter-spacing: 0.5px;">AVAILABLE</div>
+    </div>
+
+    <!-- Rented / Occupied -->
+    <div class="card-glass" style="text-align: center; padding: 20px; border-left: 3px solid #60a5fa; cursor: pointer;"
+      (click)="filterStatus = filterStatus === 1 ? null : 1"
+      [style.opacity]="filterStatus !== null && filterStatus !== 1 ? '0.45' : '1'">
+      <div style="font-size: 32px; margin-bottom: 6px;">🔑</div>
+      <div style="font-size: 28px; font-weight: 800; color: #60a5fa; line-height: 1;">
+        {{ store.myProperties().filter(p => p.status === 1).length }}
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; letter-spacing: 0.5px;">RENTED</div>
+    </div>
+
+    <!-- Sold -->
+    <div class="card-glass" style="text-align: center; padding: 20px; border-left: 3px solid #ffd200; cursor: pointer;"
+      (click)="filterStatus = filterStatus === 4 ? null : 4"
+      [style.opacity]="filterStatus !== null && filterStatus !== 4 ? '0.45' : '1'">
+      <div style="font-size: 32px; margin-bottom: 6px;">🏡</div>
+      <div style="font-size: 28px; font-weight: 800; color: #ffd200; line-height: 1;">
+        {{ store.myProperties().filter(p => p.status === 4).length }}
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; letter-spacing: 0.5px;">SOLD</div>
+    </div>
+
+    <!-- Under Maintenance -->
+    <div class="card-glass" style="text-align: center; padding: 20px; border-left: 3px solid #f97316; cursor: pointer;"
+      (click)="filterStatus = filterStatus === 2 ? null : 2"
+      [style.opacity]="filterStatus !== null && filterStatus !== 2 ? '0.45' : '1'">
+      <div style="font-size: 32px; margin-bottom: 6px;">🔧</div>
+      <div style="font-size: 28px; font-weight: 800; color: #f97316; line-height: 1;">
+        {{ store.myProperties().filter(p => p.status === 2).length }}
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; letter-spacing: 0.5px;">MAINTENANCE</div>
+    </div>
+
+  </div>
+
+  <!-- Properties List Table -->
+  <div class="card-glass mb-4">
+    <h3>Registered Portfolio List
+      <span *ngIf="filterStatus !== null" style="font-size: 13px; font-weight: 400; color: var(--text-muted); margin-left: 10px;">
+        — Filtered by: {{ filterStatus === 0 ? 'Available' : filterStatus === 1 ? 'Rented' : filterStatus === 2 ? 'Maintenance' : filterStatus === 4 ? 'Sold' : 'Off Market' }}
+        <button (click)="filterStatus = null" style="background: none; border: none; color: var(--text-muted); cursor: pointer; margin-left: 6px; font-size: 12px;">✕ Clear</button>
+      </span>
+    </h3>
+    <div style="overflow-x: auto; width: 100%;">
+      <table class="table-premium">
+        <thead>
+          <tr>
+            <th>Preview</th>
+            <th>Address</th>
+            <th>Location</th>
+            <th>Type</th>
+            <th>Specs</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" style="text-align: center;">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of store.myProperties().filter(p => filterStatus === null || p.status === filterStatus)" class="fade-in">
+            <td>
+              <img [src]="(p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls[0] : 'assets/villa_sunset.png'"
+                class="table-thumbnail" alt="Property Thumbnail" />
+            </td>
+            <td>
+              <span class="bold">{{ p.address }}</span>
+              <div class="table-description" *ngIf="p.description"
+                style="font-size: 11px; color: var(--text-muted); font-weight: 300; margin-top: 4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                [title]="p.description">{{ p.description }}</div>
+            </td>
+            <td>{{ p.city }}, {{ p.province }}</td>
+            <td>
+              {{ store.getPropertyTypeName(p.type) }}
+              <span class="status-indicator" [class.bg-blue]="p.listingType === 0" [class.bg-yellow]="p.listingType === 1"
+                style="margin-left: 6px; font-size: 10px;">
+                {{ p.listingType === 1 ? 'Sale' : 'Rent' }}
+              </span>
+            </td>
+            <td>{{ store.getPropertySpecs(p) }} &bull; 📐 {{ p.size | number }} sq ft</td>
+            <td class="bold">
+              ${{ p.monthlyRent | number:'1.2-2' }}
+              <span style="font-size: 10px; color: var(--text-muted); font-weight: 300;">{{ p.listingType === 1 ? '' :
+                '/mo' }}</span>
+            </td>
+            <td>
+              <ng-container *ngIf="store.currentUser().role === 2; else ownerStatus">
+                <!-- Check if tenant has acquired this property -->
+                <ng-container *ngIf="store.getAcquiredApplicationForProperty(p) as activeApp; else defaultStatus">
+                  <span class="status-indicator"
+                    [style.background]="activeApp.type === 0 ? 'rgba(56, 239, 125, 0.15)' : 'rgba(255, 210, 0, 0.15)'"
+                    [style.color]="activeApp.type === 0 ? '#38ef7d' : '#ffd200'">
+                    {{ activeApp.type === 0 ? '🔑 Renting' : '🏡 Bought' }}
+                  </span>
+                </ng-container>
+                <ng-template #defaultStatus>
+                  <span class="status-indicator" [class.bg-green]="p.status === 0" [class.bg-blue]="p.status === 1"
+                    [class.bg-yellow]="p.status === 2" [class.bg-yellow]="p.status === 4"
+                    [style.background]="p.status === 4 ? 'rgba(255,210,0,0.15)' : ''"
+                    [style.color]="p.status === 4 ? '#ffd200' : ''">
+                    {{ store.getPropertyStatusName(p.status) }}
+                  </span>
+                </ng-template>
+              </ng-container>
+              <ng-template #ownerStatus>
+                <span class="status-indicator" [class.bg-green]="p.status === 0" [class.bg-blue]="p.status === 1"
+                  [class.bg-yellow]="p.status === 2">
+                  {{ store.getPropertyStatusName(p.status) }}
+                </span>
+              </ng-template>
+            </td>
+            <td *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0">
+              <div style="display: flex; gap: 6px; align-items: center; justify-content: center;">
+                <button class="btn btn-secondary btn-sm" (click)="store.editProperty(p)">Edit</button>
+                <button class="btn btn-danger btn-sm" (click)="store.deleteProperty(p.id)">Delete</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Landlord: Add/Edit Property Form -->
   <div *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0"
-    class="card-glass mb-4">
+    class="card-glass">
     <h3 *ngIf="!store.isEditingProperty()">🏠 List an Elegant Property</h3>
     <h3 *ngIf="store.isEditingProperty()">✏️ Edit Property</h3>
     <form (submit)="submitPropertyForm()" #propertyForm="ngForm" class="property-form">
@@ -88,68 +226,5 @@
           (click)="store.cancelEdit()">Cancel Edit</button>
       </div>
     </form>
-  </div>
-
-  <!-- Properties List Table -->
-  <div class="card-glass">
-    <h3>Registered Portfolio List</h3>
-    <div style="overflow-x: auto; width: 100%;">
-      <table class="table-premium">
-        <thead>
-          <tr>
-            <th>Preview</th>
-            <th>Address</th>
-            <th>Location</th>
-            <th>Type</th>
-            <th>Specs</th>
-            <th>Price</th>
-            <th>Status</th>
-            <th *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" style="text-align: center;">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let p of store.myProperties()" class="fade-in">
-            <td>
-              <img [src]="(p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls[0] : 'assets/villa_sunset.png'"
-                class="table-thumbnail" alt="Property Thumbnail" />
-            </td>
-            <td>
-              <span class="bold">{{ p.address }}</span>
-              <div class="table-description" *ngIf="p.description"
-                style="font-size: 11px; color: var(--text-muted); font-weight: 300; margin-top: 4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                [title]="p.description">{{ p.description }}</div>
-            </td>
-            <td>{{ p.city }}, {{ p.province }}</td>
-            <td>
-              {{ store.getPropertyTypeName(p.type) }}
-              <span class="status-indicator" [class.bg-blue]="p.listingType === 0" [class.bg-yellow]="p.listingType === 1"
-                style="margin-left: 6px; font-size: 10px;">
-                {{ p.listingType === 1 ? 'Sale' : 'Rent' }}
-              </span>
-            </td>
-            <td>{{ store.getPropertySpecs(p) }} &bull; 📐 {{ p.size | number }} sq ft</td>
-            <td class="bold">
-              ${{ p.monthlyRent | number:'1.2-2' }}
-              <span style="font-size: 10px; color: var(--text-muted); font-weight: 300;">{{ p.listingType === 1 ? '' :
-                '/mo' }}</span>
-            </td>
-            <td>
-              <span class="status-indicator" [class.bg-green]="p.status === 0" [class.bg-blue]="p.status === 1"
-                [class.bg-yellow]="p.status === 2">
-                {{ store.getPropertyStatusName(p.status) }}
-              </span>
-            </td>
-            <td *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0">
-              <div style="display: flex; gap: 6px; align-items: center; justify-content: center;">
-                <button class="btn btn-secondary btn-sm" (click)="store.editProperty(p)">Edit</button>
-                <button class="btn btn-danger btn-sm" (click)="store.deleteProperty(p.id)">Delete</button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </div>
 </div>

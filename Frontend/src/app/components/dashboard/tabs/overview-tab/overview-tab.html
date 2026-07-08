@@ -49,12 +49,35 @@
     <div class="content-split-grid">
       <div class="card-glass">
         <h3>🏠 My Leased Residence</h3>
-        <div *ngFor="let lease of store.myLeases()">
-          <div class="lease-residence-detail">
-            <h4>Active Lease Contract</h4>
-            <p>📅 Rent Term: {{ lease.startDate | date:'mediumDate' }} &mdash; {{ lease.endDate | date:'mediumDate' }}</p>
-            <p>💰 Monthly Obligation: <strong>${{ lease.monthlyRent | number:'1.2-2' }}</strong></p>
-          </div>
+        <div style="overflow-x: auto; width: 100%;">
+          <table class="table-premium" *ngIf="store.myLeases().length > 0">
+            <thead>
+              <tr>
+                <th>Lease ID</th>
+                <th>Property ID</th>
+                <th>Rent Term</th>
+                <th>Monthly Obligation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let lease of store.myLeases()" class="fade-in">
+                <td class="code">{{ lease.id.substring(0,8) }}...</td>
+                <td class="code">{{ lease.propertyId.substring(0,8) }}...</td>
+                <td>{{ lease.startDate | date:'mediumDate' }} &mdash; {{ lease.endDate | date:'mediumDate' }}</td>
+                <td class="bold color-green">${{ lease.monthlyRent | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot style="border-top: 2px solid var(--border-glass);">
+              <tr>
+                <td colspan="3" class="bold" style="text-align: right; padding: 14px 16px; color: var(--text-secondary);">
+                  Total Monthly Obligation <span style="font-size: 10px; font-weight: 400;">(from DB)</span>:
+                </td>
+                <td class="bold color-green" style="padding: 14px 16px; font-size: 15px;">
+                  ${{ (store.tenantLeaseSummary()?.totalMonthlyObligation ?? 0) | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
         <div *ngIf="store.myLeases().length === 0" class="empty-state">
           <p>You currently do not have any active leases. Browse properties on the homepage to find one.</p>
