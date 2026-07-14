@@ -32,6 +32,17 @@
         <p class="number">{{ store.myPayments().length }}</p>
       </div>
     </div>
+    <div class="widget-card" (click)="store.dashboardTab.set('applications')" style="position: relative;">
+      <span class="widget-icon" style="color: #f59e0b;">📋</span>
+      <div class="widget-data">
+        <h3>Applications</h3>
+        <p class="number">{{ store.myApplications().length }}</p>
+      </div>
+      <span *ngIf="pendingApplications() > 0"
+        style="position:absolute; top:12px; right:12px; background: linear-gradient(135deg, #f59e0b, #ef4444); color:#fff; font-size:11px; font-weight:700; border-radius:20px; padding:3px 9px; box-shadow: 0 2px 8px rgba(239,68,68,0.4);">
+        {{ pendingApplications() }} pending
+      </span>
+    </div>
   </div>
 
   <!-- SPECIALIZED VIEWPORTS -->

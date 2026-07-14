@@ -1,4 +1,55 @@
 <div class="tab-pane fade-in">
+
+  <!-- ── Filter Bar ───────────────────────────────────────────────── -->
+  <div class="card-glass" style="margin-bottom: 20px; padding: 16px 20px;">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">🔎 Filter:</span>
+
+      <!-- Search by ID -->
+      <input
+        type="text"
+        placeholder="Search by ID..."
+        [ngModel]="filterSearch()"
+        (ngModelChange)="filterSearch.set($event)"
+        style="flex: 1; min-width: 160px; max-width: 240px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: inherit; font-size: 13px;"
+      />
+
+      <!-- Status Filter -->
+      <select
+        [ngModel]="filterStatus()"
+        (ngModelChange)="filterStatus.set($event)"
+        style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(30,30,50,0.9); color: inherit; font-size: 13px;">
+        <option value="all">All Statuses</option>
+        <option value="0">⏳ Pending</option>
+        <option value="1">✅ Approved</option>
+        <option value="2">❌ Rejected</option>
+        <option value="3">🎉 Acquired</option>
+      </select>
+
+      <!-- Type Filter -->
+      <select
+        [ngModel]="filterType()"
+        (ngModelChange)="filterType.set($event)"
+        style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(30,30,50,0.9); color: inherit; font-size: 13px;">
+        <option value="all">All Types</option>
+        <option value="0">🏠 Rental</option>
+        <option value="1">🛒 Purchase</option>
+        <option value="2">👁️ Viewing</option>
+      </select>
+
+      <!-- Clear Filters -->
+      <button *ngIf="activeFilterCount > 0" class="btn btn-sm btn-secondary" (click)="clearFilters()"
+        style="white-space: nowrap;">
+        ✕ Clear ({{ activeFilterCount }})
+      </button>
+
+      <!-- Results count -->
+      <span style="margin-left: auto; font-size: 12px; color: var(--text-muted); white-space: nowrap;">
+        {{ filteredApplications().length }} of {{ store.myApplications().length }} results
+      </span>
+    </div>
+  </div>
+
   <!-- Tenant View: Send Applications list -->
   <div *ngIf="store.currentUser().role === 2" class="card-glass">
     <h3>📋 My Sent Rental &amp; Purchase Applications</h3>
@@ -15,7 +66,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let a of store.myApplications()" class="fade-in">
+          <tr *ngFor="let a of filteredApplications()" class="fade-in">
             <td class="code">{{ a.id.substring(0,8) }}...</td>
             <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
             <td>
@@ -84,8 +135,9 @@
         </tbody>
       </table>
     </div>
-    <div *ngIf="store.myApplications().length === 0" class="empty-state">
-      <p>You have not submitted any applications yet.</p>
+    <div *ngIf="filteredApplications().length === 0" class="empty-state">
+      <p *ngIf="store.myApplications().length === 0">You have not submitted any applications yet.</p>
+      <p *ngIf="store.myApplications().length > 0">No applications match your current filters.</p>
     </div>
   </div>
 
@@ -106,7 +158,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let a of store.myApplications()" class="fade-in">
+          <tr *ngFor="let a of filteredApplications()" class="fade-in" style="cursor: pointer;" (click)="openDetailModal(a)">
             <td class="code">{{ a.id.substring(0,8) }}...</td>
             <td class="code">{{ a.propertyId.substring(0,8) }}...</td>
             <td class="code">{{ a.tenantId.substring(0,8) }}...</td>
@@ -125,30 +177,167 @@
               </span>
             </td>
             <td>
-              <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                <ng-container *ngIf="a.status === 0">
-                  <button class="btn btn-sm btn-primary" (click)="store.approveApplication(a)">Approve</button>
-                  <button class="btn btn-sm btn-danger" (click)="store.rejectApplication(a)">Reject</button>
-                </ng-container>
-                <ng-container *ngIf="a.status === 1">
-                  <span style="color: var(--text-muted); font-size: 12px;">Approved (Awaiting Payment)</span>
-                </ng-container>
-                <ng-container *ngIf="a.status === 2">
-                  <span style="color: var(--danger); font-size: 12px;">Rejected</span>
-                </ng-container>
-                <ng-container *ngIf="a.status === 3">
-                  <span style="color: #34d399; font-size: 12px; font-weight: bold;">
-                    🎉 {{ a.type === 1 ? 'Sold' : (a.type === 2 ? 'Completed' : 'Rented') }}
-                  </span>
-                </ng-container>
-              </div>
-            </td>
+                <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                  <button class="btn btn-sm" style="background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3);" (click)="openDetailModal(a); $event.stopPropagation()">🔍 View</button>
+                  <ng-container *ngIf="a.status === 0">
+                    <button class="btn btn-sm btn-primary" (click)="store.approveApplication(a); $event.stopPropagation()">Approve</button>
+                    <button class="btn btn-sm btn-danger" (click)="store.rejectApplication(a); $event.stopPropagation()">Reject</button>
+                  </ng-container>
+                  <ng-container *ngIf="a.status === 1">
+                    <span style="color: var(--text-muted); font-size: 12px;">Approved (Awaiting Payment)</span>
+                  </ng-container>
+                  <ng-container *ngIf="a.status === 2">
+                    <span style="color: var(--danger); font-size: 12px;">Rejected</span>
+                  </ng-container>
+                  <ng-container *ngIf="a.status === 3">
+                    <span style="color: #34d399; font-size: 12px; font-weight: bold;">
+                      🎉 {{ a.type === 1 ? 'Sold' : (a.type === 2 ? 'Completed' : 'Rented') }}
+                    </span>
+                  </ng-container>
+                </div>
+              </td>
           </tr>
         </tbody>
       </table>
     </div>
-    <div *ngIf="store.myApplications().length === 0" class="empty-state">
-      <p>No pending applications received.</p>
+    <div *ngIf="filteredApplications().length === 0" class="empty-state">
+      <p *ngIf="store.myApplications().length === 0">No applications received yet.</p>
+      <p *ngIf="store.myApplications().length > 0">No applications match your current filters.</p>
+    </div>
+  </div>
+
+  <!-- =================== APPLICATION DETAIL MODAL =================== -->
+  <div *ngIf="detailApplication" class="modal-backdrop" (click)="closeDetailModal()">
+    <div class="modal-card fade-in" (click)="$event.stopPropagation()" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto;">
+
+      <!-- Header -->
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; margin-bottom: 20px;">
+        <h3 style="margin:0;">📋 Application Details</h3>
+        <button class="modal-close" (click)="closeDetailModal()">✕</button>
+      </div>
+
+      <ng-container *ngIf="getPropertyForApp(detailApplication.propertyId) as property">
+        <!-- Property Section -->
+        <div style="margin-bottom: 24px;">
+          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px;">Property Applied For</p>
+
+          <!-- Property Image -->
+          <div style="width: 100%; height: 200px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; background: rgba(255,255,255,0.05);">
+            <img *ngIf="property.imageUrls && property.imageUrls.length > 0"
+              [src]="property.imageUrls[0]"
+              style="width:100%; height:100%; object-fit:cover;"
+              [alt]="property.address" />
+            <div *ngIf="!property.imageUrls || property.imageUrls.length === 0"
+              style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:48px;">
+              🏠
+            </div>
+          </div>
+
+          <!-- Property Details Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+              <div style="font-size:11px; color: var(--text-muted);">Address</div>
+              <div style="font-weight:600; margin-top:4px;">{{ property.address }}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+              <div style="font-size:11px; color: var(--text-muted);">City / Province</div>
+              <div style="font-weight:600; margin-top:4px;">{{ property.city }}, {{ property.province }}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+              <div style="font-size:11px; color: var(--text-muted);">Monthly Rent / Price</div>
+              <div style="font-weight:700; color: #34d399; margin-top:4px;">${{ property.monthlyRent | number:'1.0-0' }}/mo</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+              <div style="font-size:11px; color: var(--text-muted);">Specs</div>
+              <div style="font-weight:600; margin-top:4px;">{{ store.getPropertySpecs(property) }}</div>
+            </div>
+          </div>
+        </div>
+        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 20px 0;" />
+      </ng-container>
+
+      <!-- Applicant Section -->
+      <ng-container *ngIf="getApplicant(detailApplication.tenantId) as applicant">
+        <div style="margin-bottom: 24px;">
+          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px;">Applicant Information</p>
+
+          <!-- Applicant Avatar + Name banner -->
+          <div style="display:flex; align-items:center; gap:14px; padding:14px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); border-radius:12px; margin-bottom:12px;">
+            <div style="width:50px; height:50px; border-radius:50%; background: linear-gradient(135deg, #6366f1, #a855f7); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:#fff; flex-shrink:0;">
+              {{ applicant.firstName.charAt(0) }}{{ applicant.lastName.charAt(0) }}
+            </div>
+            <div>
+              <div style="font-size:17px; font-weight:700;">{{ applicant.firstName }} {{ applicant.lastName }}</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">{{ store.getRoleName(applicant.role) }}</div>
+            </div>
+            <div style="margin-left:auto;">
+              <span *ngIf="applicant.isEmailConfirmed" style="background:rgba(52,211,153,0.15); color:#34d399; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600;">✅ Verified</span>
+              <span *ngIf="!applicant.isEmailConfirmed" style="background:rgba(249,115,22,0.15); color:#f97316; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600;">⚠️ Unverified</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+              <div style="font-size:11px; color: var(--text-muted);">Email Address</div>
+              <div style="font-weight:600; margin-top:4px; word-break:break-all;">{{ applicant.email }}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+              <div style="font-size:11px; color: var(--text-muted);">Phone Number</div>
+              <div style="font-weight:600; margin-top:4px;">{{ applicant.phoneNumber || 'Not provided' }}</div>
+            </div>
+          </div>
+        </div>
+        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 20px 0;" />
+      </ng-container>
+
+      <!-- No people data fallback (non-admin landlords may not have people loaded) -->
+      <div *ngIf="!getApplicant(detailApplication.tenantId)" style="margin-bottom:16px; padding:14px; background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.2); border-radius:10px; color:#f97316; font-size:13px;">
+        ⚠️ Detailed applicant profile is only visible to Admin accounts.
+        <br><small style="color:var(--text-muted);">Applicant ID: {{ detailApplication.tenantId }}</small>
+      </div>
+
+      <!-- Application Meta -->
+      <div style="margin-bottom: 24px;">
+        <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px;">Application Summary</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+          <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+            <div style="font-size:11px; color: var(--text-muted);">Type</div>
+            <div style="margin-top:6px;"><span class="status-indicator bg-blue">{{ store.getApplicationTypeName(detailApplication.type) }}</span></div>
+          </div>
+          <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+            <div style="font-size:11px; color: var(--text-muted);">Date Applied</div>
+            <div style="font-weight:600; margin-top:4px;">{{ detailApplication.appliedDate | date:'mediumDate' }}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
+            <div style="font-size:11px; color: var(--text-muted);">Current Status</div>
+            <div style="margin-top:6px;">
+              <span class="status-indicator"
+                [class.bg-yellow]="detailApplication.status === 0"
+                [class.bg-green]="detailApplication.status === 1"
+                [class.bg-danger]="detailApplication.status === 2"
+                [class.bg-success]="detailApplication.status === 3">
+                {{ store.getApplicationStatusName(detailApplication.status) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div *ngIf="detailApplication.status === 0" style="display: flex; gap: 12px;">
+        <button class="btn btn-primary" style="flex:1;"
+          (click)="store.approveApplication(detailApplication); closeDetailModal()">
+          ✅ Approve Application
+        </button>
+        <button class="btn btn-danger" style="flex:1;"
+          (click)="store.rejectApplication(detailApplication); closeDetailModal()">
+          ❌ Reject Application
+        </button>
+      </div>
+      <div *ngIf="detailApplication.status !== 0" style="display:flex; justify-content:flex-end;">
+        <button class="btn btn-secondary" (click)="closeDetailModal()">Close</button>
+      </div>
+
     </div>
   </div>
 

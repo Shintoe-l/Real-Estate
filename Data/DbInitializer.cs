@@ -172,6 +172,7 @@ namespace RealEstate.Data
                 Amount = 2500.00m, // Deposit
                 PaymentDate = DateTime.UtcNow.AddDays(-60),
                 Type = PaymentType.SecurityDeposit,
+                Method = PaymentMethod.BankTransfer,
                 Status = PaymentStatus.Completed
             };
 
@@ -182,6 +183,7 @@ namespace RealEstate.Data
                 Amount = 2500.00m, // Month 1 rent
                 PaymentDate = DateTime.UtcNow.AddDays(-60),
                 Type = PaymentType.Rent,
+                Method = PaymentMethod.BankTransfer,
                 Status = PaymentStatus.Completed
             };
 
@@ -192,6 +194,7 @@ namespace RealEstate.Data
                 Amount = 2500.00m, // Month 2 rent
                 PaymentDate = DateTime.UtcNow.AddDays(-30),
                 Type = PaymentType.Rent,
+                Method = PaymentMethod.BankTransfer,
                 Status = PaymentStatus.Completed
             };
 
@@ -202,6 +205,7 @@ namespace RealEstate.Data
                 Amount = 3800.00m, // Month 1 rent
                 PaymentDate = DateTime.UtcNow.AddDays(-30),
                 Type = PaymentType.Rent,
+                Method = PaymentMethod.CreditCard,
                 Status = PaymentStatus.Completed
             };
 

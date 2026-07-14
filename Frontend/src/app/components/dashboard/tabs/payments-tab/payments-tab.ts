@@ -15,7 +15,9 @@ export class PaymentsTabComponent {
   newPaymentData = {
     leaseId: '',
     amount: 0.0,
-    type: 0
+    type: 0,
+    method: 0,
+    reference: ''
   };
 
   constructor() {

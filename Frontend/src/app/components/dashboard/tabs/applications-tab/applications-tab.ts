@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RealEstateStore } from '../../../../services/real-estate-store.service';
@@ -11,6 +11,62 @@ import { RealEstateStore } from '../../../../services/real-estate-store.service'
 })
 export class ApplicationsTabComponent {
   public store = inject(RealEstateStore);
+
+  // ── Filter State ──────────────────────────────────────────────────
+  filterStatus = signal<string>('all');
+  filterType   = signal<string>('all');
+  filterSearch = signal<string>('');
+
+  filteredApplications = computed(() => {
+    let apps = this.store.myApplications();
+    const status  = this.filterStatus();
+    const type    = this.filterType();
+    const search  = this.filterSearch().toLowerCase().trim();
+
+    if (status !== 'all') apps = apps.filter((a: any) => a.status === Number(status));
+    if (type   !== 'all') apps = apps.filter((a: any) => a.type   === Number(type));
+    if (search) {
+      apps = apps.filter((a: any) =>
+        a.id.toLowerCase().includes(search) ||
+        a.propertyId.toLowerCase().includes(search) ||
+        a.tenantId?.toLowerCase().includes(search)
+      );
+    }
+    return apps;
+  });
+
+  clearFilters() {
+    this.filterStatus.set('all');
+    this.filterType.set('all');
+    this.filterSearch.set('');
+  }
+
+  get activeFilterCount(): number {
+    let c = 0;
+    if (this.filterStatus() !== 'all') c++;
+    if (this.filterType()   !== 'all') c++;
+    if (this.filterSearch())            c++;
+    return c;
+  }
+
+  // ── Application Detail Modal ──────────────────────────────────────
+  detailApplication: any = null;
+
+  openDetailModal(app: any) {
+    this.detailApplication = app;
+  }
+
+  closeDetailModal() {
+    this.detailApplication = null;
+  }
+
+  getApplicant(tenantId: string): any {
+    return this.store.people().find((p: any) => p.id === tenantId) || null;
+  }
+
+  getPropertyForApp(propertyId: string): any {
+    return this.store.properties().find((p: any) => p.id === propertyId) || null;
+  }
 
   // Payment Modal State
   showPaymentModal = false;

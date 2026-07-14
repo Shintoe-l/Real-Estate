@@ -12,6 +12,8 @@ namespace RealEstate.Models
         public DateTime PaymentDate { get; set; }
         
         public PaymentType Type { get; set; }
+        public PaymentMethod Method { get; set; }
+        public string? Reference { get; set; }
         public PaymentStatus Status { get; set; }
     }
 }

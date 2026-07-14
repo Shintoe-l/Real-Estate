@@ -102,6 +102,25 @@ namespace RealEstate.Controllers
                              // Purchase = property is now Sold
                              property.Status = PropertyStatus.Sold;
                              await _propertyRepo.UpdateAsync(property.Id, property);
+
+                             // Create a purchase agreement (lease record) so that payment can be linked to it
+                             var existingPurchaseLeases = await _leaseRepo.GetByTenantAsync(app.TenantId);
+                             var hasPurchaseLease = existingPurchaseLeases.Any(l => l.PropertyId == app.PropertyId);
+                             if (!hasPurchaseLease)
+                             {
+                                 var purchaseLease = new Lease
+                                 {
+                                     Id = Guid.NewGuid(),
+                                     PropertyId = app.PropertyId,
+                                     TenantId = app.TenantId,
+                                     StartDate = DateTime.UtcNow,
+                                     EndDate = DateTime.UtcNow, // One-time purchase, not an ongoing lease
+                                     MonthlyRent = property.MonthlyRent,
+                                     SecurityDeposit = 0,
+                                     IsActive = false // False = purchase agreement, not a rental lease
+                                 };
+                                 await _leaseRepo.CreateAsync(purchaseLease);
+                             }
                          }
                          else if (app.Type == ApplicationType.Rental)
                          {

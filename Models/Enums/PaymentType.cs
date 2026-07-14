@@ -6,6 +6,7 @@ namespace RealEstate.Models.Enums
         SecurityDeposit,
         LateFee,
         MaintenanceFee,
-        Other
+        Other,
+        PurchasePayment
     }
 }

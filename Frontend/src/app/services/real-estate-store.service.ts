@@ -66,7 +66,9 @@ export class RealEstateStore {
   newPaymentData = signal({
     leaseId: '',
     amount: 0.0,
-    type: 0
+    type: 0,
+    method: 0,
+    reference: ''
   });
 
   // Feedback State
@@ -267,6 +269,12 @@ export class RealEstateStore {
           this.apiService.getApplicationsByPropertyIds(propIds).subscribe({
             next: (data) => this.applications.set(data),
             error: (err) => console.error('Error fetching landlord applications', err)
+          });
+
+          // People — needed so the Application Detail modal can resolve applicant names/contact info
+          this.apiService.getPeople().subscribe({
+            next: (data) => this.people.set(data),
+            error: (err) => console.error('Error fetching people for landlord', err)
           });
         },
         error: (err) => console.error('Error fetching landlord properties', err)
@@ -561,14 +569,17 @@ export class RealEstateStore {
       leaseId: this.newPaymentData().leaseId,
       amount: Number(this.newPaymentData().amount),
       type: Number(this.newPaymentData().type),
+      method: Number(this.newPaymentData().method),
+      reference: this.newPaymentData().reference,
       paymentDate: new Date().toISOString()
     };
 
     this.apiService.createPayment(payload).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.dashboardSuccess.set('Rent payment processed successfully!');
+        this.downloadReceipt(payload, res.id);
         this.loadDashboardData();
-        this.newPaymentData.update(state => ({ ...state, amount: 0.0 }));
+        this.newPaymentData.update(state => ({ ...state, amount: 0.0, reference: '' }));
       },
       error: () => {
         this.dashboardError.set('Failed to process payment.');
@@ -706,45 +717,63 @@ export class RealEstateStore {
     this.dashboardError.set('');
     this.dashboardSuccess.set('');
 
+    // Map method label string from the modal to the PaymentMethod enum int
+    const methodMap: { [key: string]: number } = {
+      'EcoCash': 5, 'OneMoney': 5, 'TeleCash': 5,
+      'Bank Transfer': 1, 'ZIPIT': 1, 'Swipe/POS': 0,
+      'Credit Card': 0, 'Cash': 2, 'PayPal': 3,
+      'Receipt Upload': 4
+    };
+    const methodInt = methodMap[methodLabel] ?? 4;
+
     // Update Application Status to Acquired (3)
     this.apiService.updateApplicationStatus(app.id, 3).subscribe({
       next: () => {
-        // Fetch latest leases so we get the newly created lease from the backend
-        this.apiService.getLeasesByTenant(this.currentUser().id).subscribe({
-          next: (leases) => {
-            this.leases.set(leases);
-            const lease = leases.find((l: any) => l.propertyId === app.propertyId);
-            const leaseId = lease?.id;
+        // Wait a tick to let the backend create the purchase/rental lease before querying
+        setTimeout(() => {
+          this.apiService.getLeasesByTenant(this.currentUser().id).subscribe({
+            next: (leases) => {
+              this.leases.set(leases);
+              const lease = leases.find((l: any) => l.propertyId === app.propertyId);
+              const leaseId = lease?.id;
 
-            if (!leaseId) {
-              this.dashboardSuccess.set(`✅ Receipt submitted! Reference: ${reference}. Status updated to Acquired.`);
-              this.loadDashboardData();
-              return;
-            }
-
-            const payload = {
-              leaseId,
-              amount: Number(amount) || 0,
-              type: 0, // Rent Payment
-              paymentDate: new Date().toISOString()
-            };
-
-            this.apiService.createPayment(payload).subscribe({
-              next: () => {
-                this.dashboardSuccess.set(`✅ Payment of $${amount} via ${methodLabel} submitted. Ref: ${reference}. Status updated to Acquired!`);
+              if (!leaseId) {
+                // Backend may still be processing; show success but note payment not linked
+                this.dashboardSuccess.set(`✅ Status updated to Acquired. Reference: ${reference}. Payment ledger sync pending.`);
                 this.loadDashboardData();
-              },
-              error: () => {
-                this.dashboardError.set('Payment registration in ledger failed, but application status updated.');
-                this.loadDashboardData();
+                return;
               }
-            });
-          },
-          error: () => {
-             this.dashboardSuccess.set(`✅ Status updated to Acquired, but could not fetch lease to record payment.`);
-             this.loadDashboardData();
-          }
-        });
+
+              // PaymentType: 5 = PurchasePayment for type===1 (Purchase), 0 = Rent for type===0
+              const paymentType = app.type === 1 ? 5 : 0;
+
+              const payload = {
+                leaseId,
+                amount: Number(amount) || 0,
+                type: paymentType,
+                method: methodInt,
+                reference: reference,
+                paymentDate: new Date().toISOString()
+              };
+
+              this.apiService.createPayment(payload).subscribe({
+                next: (res: any) => {
+                  this.dashboardSuccess.set(`✅ Payment of $${amount} via ${methodLabel} submitted. Ref: ${reference}. Status updated to Acquired!`);
+                  this.downloadReceipt(payload, res.id);
+                  this.loadDashboardData();
+                },
+                error: () => {
+                  this.dashboardError.set('Payment registration in ledger failed, but application status updated.');
+                  this.loadDashboardData();
+                }
+              });
+            },
+            error: () => {
+              this.dashboardSuccess.set(`✅ Status updated to Acquired, but could not fetch agreement to record payment.`);
+              this.loadDashboardData();
+            }
+          });
+        }, 800); // allow backend time to create the purchase lease record
       },
       error: () => {
         this.dashboardError.set('Failed to update application status to Acquired.');
@@ -784,6 +813,18 @@ export class RealEstateStore {
     }
   }
 
+  getPaymentMethodName(method: number): string {
+    switch (method) {
+      case 0: return 'Credit Card';
+      case 1: return 'Bank Transfer';
+      case 2: return 'Cash';
+      case 3: return 'PayPal';
+      case 4: return 'Other';
+      case 5: return 'EcoCash';
+      default: return 'Other';
+    }
+  }
+
   getPropertyStatusName(status: number): string {
     switch (status) {
       case 0: return 'Available';
@@ -793,6 +834,41 @@ export class RealEstateStore {
       case 4: return 'Sold';
       default: return 'Available';
     }
+  }
+
+  downloadReceipt(paymentPayload: any, generatedId: string) {
+    const user = this.currentUser();
+    const tenantName = user ? `${user.firstName} ${user.lastName}` : 'Tenant';
+    const lease = this.leases().find(l => l.id === paymentPayload.leaseId);
+    const property = lease ? this.properties().find(p => p.id === lease.propertyId) : null;
+    const address = property ? property.address : 'Leased Property';
+    const methodStr = this.getPaymentMethodName(paymentPayload.method);
+    const dateStr = new Date(paymentPayload.paymentDate).toLocaleString();
+
+    const receiptContent = `=============================================
+             OFFICIAL RECEIPT
+=============================================
+Transaction ID : ${generatedId || 'PENDING'}
+Date           : ${dateStr}
+Received From  : ${tenantName}
+Property       : ${address}
+---------------------------------------------
+Payment Method : ${methodStr}
+Reference / POP: ${paymentPayload.reference || 'N/A'}
+Amount Paid    : $${paymentPayload.amount.toFixed(2)}
+---------------------------------------------
+Thank you for your payment!
+=============================================`;
+
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Receipt_${generatedId ? generatedId.substring(0,8) : Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   }
 
   getPaymentStatusName(status: number): string {
@@ -807,10 +883,12 @@ export class RealEstateStore {
   getPaymentTypeName(type: number): string {
     switch (type) {
       case 0: return 'Rent';
-      case 1: return 'Deposit';
-      case 2: return 'Maintenance';
-      case 3: return 'Other';
-      default: return 'Rent';
+      case 1: return 'Security Deposit';
+      case 2: return 'Late Fee';
+      case 3: return 'Maintenance Fee';
+      case 4: return 'Other';
+      case 5: return 'Purchase Payment';
+      default: return 'Other';
     }
   }
 

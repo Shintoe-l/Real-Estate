@@ -166,6 +166,8 @@ namespace RealEstate.Mappers
                 Amount = payment.Amount,
                 PaymentDate = payment.PaymentDate,
                 Type = payment.Type,
+                Method = payment.Method,
+                Reference = payment.Reference,
                 Status = payment.Status
             };
         }
@@ -179,6 +181,8 @@ namespace RealEstate.Mappers
                 Amount = dto.Amount,
                 PaymentDate = dto.PaymentDate,
                 Type = dto.Type,
+                Method = dto.Method,
+                Reference = dto.Reference,
                 Status = PaymentStatus.Pending // Pending by default
             };
         }
