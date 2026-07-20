@@ -13,5 +13,7 @@ namespace RealEstate.Models
         
         public Role Role { get; set; }
         public string PasswordHash { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; } = false;
+        public string? EmailConfirmationCode { get; set; }
     }
 }

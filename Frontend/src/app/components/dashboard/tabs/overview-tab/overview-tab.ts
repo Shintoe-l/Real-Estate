@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RealEstateStore } from '../../../../services/real-estate-store.service';
 
@@ -10,4 +10,8 @@ import { RealEstateStore } from '../../../../services/real-estate-store.service'
 })
 export class OverviewTabComponent {
   public store = inject(RealEstateStore);
+
+  pendingApplications = computed(() =>
+    this.store.myApplications().filter((a: any) => a.status === 0).length
+  );
 }

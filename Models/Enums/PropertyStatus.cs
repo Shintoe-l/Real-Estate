@@ -5,6 +5,7 @@ namespace RealEstate.Models.Enums
         Available,
         Occupied,
         UnderMaintenance,
-        OffMarket
+        OffMarket,
+        Sold
     }
 }

@@ -41,9 +41,21 @@ export class ApiService {
     return this.http.post(`${this.apiUrl}/auth/register`, details);
   }
 
+  verifyEmail(payload: { email: string, code: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/verify-email`, payload);
+  }
+
+  resendVerification(payload: { email: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/resend-verification`, payload);
+  }
+
   // Property API
   getProperties(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/property`);
+  }
+
+  getPropertiesByLandlord(landlordId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/property/landlord/${landlordId}`);
   }
 
   createProperty(property: any): Observable<any> {
@@ -68,6 +80,14 @@ export class ApiService {
     return this.http.get<any[]>(`${this.apiUrl}/lease`);
   }
 
+  getLeasesByTenant(tenantId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/lease/tenant/${tenantId}`);
+  }
+
+  getTenantLeaseSummary(tenantId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/lease/tenant/${tenantId}/summary`);
+  }
+
   createLease(lease: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/lease`, lease);
   }
@@ -75,6 +95,14 @@ export class ApiService {
   // Payment API
   getPayments(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/payment`);
+  }
+
+  getPaymentsByLeaseIds(leaseIds: string[]): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/payment/by-leases?leaseIds=${leaseIds.join(',')}`);
+  }
+
+  getPaymentsSummary(leaseIds: string[]): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/payment/summary?leaseIds=${leaseIds.join(',')}`);
   }
 
   createPayment(payment: any): Observable<any> {
@@ -86,13 +114,37 @@ export class ApiService {
     return this.http.get<any[]>(`${this.apiUrl}/maintenancerequest`);
   }
 
+  getMaintenanceByTenant(tenantId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/maintenancerequest/tenant/${tenantId}`);
+  }
+
+  getMaintenanceByPropertyIds(propertyIds: string[]): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/maintenancerequest/by-properties?propertyIds=${propertyIds.join(',')}`);
+  }
+
   createMaintenanceRequest(request: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/maintenancerequest`, request);
+  }
+
+  updateMaintenanceRequest(id: string, status: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/maintenancerequest/${id}`, { status });
+  }
+
+  rateMaintenanceRequest(id: string, isSatisfied: boolean): Observable<any> {
+    return this.http.put(`${this.apiUrl}/maintenancerequest/${id}`, { isSatisfied });
   }
 
   // Application API
   getApplications(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/application`);
+  }
+
+  getApplicationsByTenant(tenantId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/application/tenant/${tenantId}`);
+  }
+
+  getApplicationsByPropertyIds(propertyIds: string[]): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/application/by-properties?propertyIds=${propertyIds.join(',')}`);
   }
 
   createApplication(application: any): Observable<any> {

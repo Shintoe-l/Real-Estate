@@ -10,6 +10,8 @@ namespace RealEstate.Interfaces
     {
         Task<List<Application>> GetAllAsync();
         Task<Application?> GetByIdAsync(Guid id);
+        Task<List<Application>> GetByTenantAsync(Guid tenantId);
+        Task<List<Application>> GetByPropertyIdsAsync(IEnumerable<Guid> propertyIds);
         Task<Application> CreateAsync(Application application);
         Task<Application?> UpdateStatusAsync(Guid id, ApplicationStatus status);
         Task<Application?> DeleteAsync(Guid id);

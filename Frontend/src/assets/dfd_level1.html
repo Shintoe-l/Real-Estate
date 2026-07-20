@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>AP Properties – Level 1 DFD</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1117;font-family:'Segoe UI',Arial,sans-serif;
+     display:flex;flex-direction:column;align-items:center;
+     padding:28px 16px 56px;min-height:100vh;color:#e6edf3}
+h1{font-size:20px;font-weight:700;color:#f0f6fc;margin-bottom:4px;text-align:center}
+p.sub{font-size:12px;color:#6e7681;text-align:center;margin-bottom:16px}
+.legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+.li{display:flex;align-items:center;gap:7px;font-size:11px;color:#8b949e}
+.sq{width:22px;height:14px;border:2px solid}
+.ci{width:16px;height:16px;border-radius:50%;border:2px solid}
+canvas{background:#161b22;border-radius:12px;border:1px solid #21262d;
+       max-width:100%;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+button{margin-top:18px;padding:9px 26px;
+       background:linear-gradient(135deg,#58a6ff,#388bfd);
+       border:none;border-radius:8px;color:#fff;
+       font-size:13px;font-weight:600;cursor:pointer}
+button:hover{opacity:.85}
+</style>
+</head>
+<body>
+<h1>AP Properties – Real Estate Management System</h1>
+<p class="sub">Level 1 Data Flow Diagram</p>
+<div class="legend">
+  <div class="li"><div class="sq" style="background:rgba(255,255,255,.05);border-color:#c9d1d9"></div>External Entity</div>
+  <div class="li"><div class="ci" style="background:rgba(88,166,255,.12);border-color:#58a6ff"></div>Process</div>
+  <div class="li"><div class="sq" style="background:rgba(255,210,0,.08);border-color:#ffd200;border-left:none;width:26px"></div>Data Store</div>
+</div>
+<canvas id="c" width="1340" height="960"></canvas>
+<button onclick="exp()">⬇ Export PNG</button>
+
+<script>
+const cv=document.getElementById('c'), g=cv.getContext('2d');
+
+/* ── palette ────────────────────────────────────────────────── */
+const C={
+  ext  :{fill:'rgba(255,255,255,.04)',stroke:'#c9d1d9',text:'#e6edf3'},
+  proc :{fill:'rgba(88,166,255,.10)', stroke:'#58a6ff',text:'#c9d1d9'},
+  store:{fill:'rgba(255,210,0,.07)',  stroke:'#ffd200',text:'#ffd200'},
+  flow :'#484f58', lbl:'#8b949e', data:'#c9d1d9'
+};
+
+/* ── helpers ────────────────────────────────────────────────── */
+function wrap(txt,x,y,maxW,lh){
+  const ws=txt.split(' '),ls=[];let ln='';
+  for(const w of ws){
+    const t=ln+w+' ';
+    if(g.measureText(t).width>maxW&&ln){ls.push(ln.trim());ln=w+' ';}
+    else ln=t;
+  }
+  ls.push(ln.trim());
+  const sy=y-((ls.length-1)*lh)/2;
+  ls.forEach((l,i)=>g.fillText(l,x,sy+i*lh));
+}
+
+/* External entity – solid rectangle */
+function ext(x,y,w,h,lbl){
+  g.save();
+  g.fillStyle=C.ext.fill;g.fillRect(x,y,w,h);
+  g.strokeStyle=C.ext.stroke;g.lineWidth=1.8;g.strokeRect(x,y,w,h);
+  g.fillStyle=C.ext.text;g.font='bold 11px Segoe UI';
+  g.textAlign='center';g.textBaseline='middle';
+  wrap(lbl,x+w/2,y+h/2,w-10,14);
+  g.restore();
+}
+
+/* Process – circle */
+function proc(cx,cy,r,id,lbl){
+  g.save();
+  g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);
+  g.fillStyle=C.proc.fill;g.fill();
+  g.strokeStyle=C.proc.stroke;g.lineWidth=2;g.stroke();
+  /* id ring */
+  g.beginPath();g.arc(cx,cy-r+14,12,0,Math.PI*2);
+  g.fillStyle='rgba(88,166,255,.25)';g.fill();
+  g.fillStyle=C.proc.stroke;g.font='bold 10px Segoe UI';
+  g.textAlign='center';g.textBaseline='middle';
+  g.fillText(id,cx,cy-r+14);
+  /* label */
+  g.fillStyle=C.proc.text;g.font='bold 11px Segoe UI';
+  wrap(lbl,cx,cy+4,r*1.6,14);
+  g.restore();
+}
+
+/* Data store – open-ended bar */
+function store(x,y,w,h,id,lbl){
+  g.save();
+  g.fillStyle=C.store.fill;g.fillRect(x,y,w,h);
+  g.strokeStyle=C.store.stroke;g.lineWidth=1.8;
+  [[x,y,x+w,y],[x,y+h,x+w,y+h],[x,y,x,y+h]].forEach(([x1,y1,x2,y2])=>{
+    g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+  });
+  g.fillStyle=C.store.stroke;g.font='bold 10px Segoe UI';
+  g.textAlign='center';g.textBaseline='middle';
+  g.fillText(id,x+22,y+h/2);
+  g.strokeStyle='rgba(255,210,0,.2)';g.lineWidth=1;
+  g.beginPath();g.moveTo(x+38,y);g.lineTo(x+38,y+h);g.stroke();
+  g.fillStyle=C.store.text;g.font='11px Segoe UI';
+  g.textAlign='center';g.textBaseline='middle';
+  g.fillText(lbl,x+38+(w-38)/2,y+h/2);
+  g.restore();
+}
+
+/* Labelled arrow */
+function arrow(x1,y1,x2,y2,dataLbl='',noteLbl=''){
+  const hl=9,ang=Math.atan2(y2-y1,x2-x1);
+  g.save();
+  g.strokeStyle=C.flow;g.lineWidth=1.4;g.setLineDash([5,4]);
+  g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+  g.setLineDash([]);
+  g.beginPath();g.moveTo(x2,y2);
+  g.lineTo(x2-hl*Math.cos(ang-.42),y2-hl*Math.sin(ang-.42));
+  g.lineTo(x2-hl*Math.cos(ang+.42),y2-hl*Math.sin(ang+.42));
+  g.closePath();g.fillStyle=C.flow;g.fill();
+  const mx=(x1+x2)/2,my=(y1+y2)/2;
+  if(dataLbl){
+    g.font='bold 9px Segoe UI';g.fillStyle=C.data;
+    g.textAlign='center';g.textBaseline='middle';
+    g.fillText(dataLbl,mx,my-9);
+  }
+  if(noteLbl){
+    g.font='9px Segoe UI';g.fillStyle=C.lbl;
+    g.textAlign='center';g.textBaseline='middle';
+    g.fillText(noteLbl,mx,my+5);
+  }
+  g.restore();
+}
+
+/* ── background ─────────────────────────────────────────────── */
+g.fillStyle='#161b22';g.fillRect(0,0,cv.width,cv.height);
+
+/* ══════════════════════════════════════════════════════════════
+   LAYOUT
+   ══════════════════════════════════════════════════════════════
+   External entities  – left column + right column
+   Processes          – two columns of circles
+   Data stores        – centre strip
+   ══════════════════════════════════════════════════════════════ */
+
+/* External entities [x,y,w,h,label] */
+const EW=110,EH=46;
+const E={
+  tenant  :[18,  90, EW,EH,'Tenant'],
+  landlord:[18, 380, EW,EH,'Landlord / PM'],
+  admin   :[18, 660, EW,EH,'Admin'],
+  public  :[1210,380,EW,EH,'Public Browser'],
+};
+
+/* Processes [cx,cy,r,id,label] – verb-first names */
+const PR=52;
+const P={
+  p1:[290, 100, PR,'1','Authenticate User'],
+  p2:[290, 310, PR,'2','Manage Property Listings'],
+  p3:[290, 520, PR,'3','Process Rental / Purchase Application'],
+  p4:[290, 730, PR,'4','Record Payment Transaction'],
+  p5:[750, 100, PR,'5','Generate Lease Agreement'],
+  p6:[750, 310, PR,'6','Handle Maintenance Request'],
+  p7:[750, 520, PR,'7','Browse & Search Properties'],
+  p8:[750, 730, PR,'8','Send Status Notification'],
+};
+
+/* Data stores [x,y,w,h,id,label] */
+const SW=190,SH=32;
+const D={
+  d1:[480,  84,SW,SH,'D1','Users / Persons'],
+  d2:[480, 294,SW,SH,'D2','Properties'],
+  d3:[480, 504,SW,SH,'D3','Applications'],
+  d4:[480, 714,SW,SH,'D4','Payments'],
+  d5:[980,  84,SW,SH,'D5','Leases'],
+  d6:[980, 294,SW,SH,'D6','Maint. Requests'],
+};
+
+/* ── Draw data stores ──────────────────────────────────────── */
+Object.values(D).forEach(([x,y,w,h,id,lbl])=>store(x,y,w,h,id,lbl));
+
+/* ── Draw processes ────────────────────────────────────────── */
+Object.values(P).forEach(([cx,cy,r,id,lbl])=>proc(cx,cy,r,id,lbl));
+
+/* ── Draw external entities ────────────────────────────────── */
+Object.values(E).forEach(([x,y,w,h,lbl])=>ext(x,y,w,h,lbl));
+
+/* ── Shortcut fns ──────────────────────────────────────────── */
+function pe(k,s){const[cx,cy,r]=P[k];
+  if(s==='L')return[cx-r,cy];if(s==='R')return[cx+r,cy];
+  if(s==='T')return[cx,cy-r];if(s==='B')return[cx,cy+r];
+  if(s==='TL')return[cx-r*.7,cy-r*.7];if(s==='TR')return[cx+r*.7,cy-r*.7];
+  if(s==='BL')return[cx-r*.7,cy+r*.7];if(s==='BR')return[cx+r*.7,cy+r*.7];
+}
+function de(k,s){const[x,y,w,h]=D[k];
+  if(s==='L')return[x,y+h/2];if(s==='R')return[x+w,y+h/2];
+  if(s==='T')return[x+w/2,y];if(s==='B')return[x+w/2,y+h];
+}
+function ee(k,s){const[x,y,w,h]=E[k];
+  if(s==='R')return[x+w,y+h/2];if(s==='L')return[x,y+h/2];
+  if(s==='T')return[x+w/2,y];if(s==='B')return[x+w/2,y+h];
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DATA FLOWS
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── P1 Authenticate User ──────────────────────────────────── */
+arrow(...ee('tenant','R'), ...pe('p1','L'),      'Login / Register Credentials');
+arrow(...pe('p1','L')[0]+4,...pe('p1','L')[1]+10,...ee('tenant','R')[0]+4,...ee('tenant','R')[1]+10,'Auth Token / Session');
+arrow(...pe('p1','R'), ...de('d1','L'),           'Store User Profile');
+arrow(...de('d1','L')[0],...de('d1','L')[1]+9,   ...pe('p1','R')[0],...pe('p1','R')[1]+9,'Verified User Record');
+/* Admin login */
+arrow(...ee('admin','R')[0],...ee('admin','R')[1],...pe('p1','L')[0],...pe('p1','L')[1]+28,'Admin Credentials');
+
+/* ── P2 Manage Property Listings ───────────────────────────── */
+arrow(...ee('landlord','R'), ...pe('p2','L'),     'Listing Details / Photos');
+arrow(...pe('p2','L')[0]+4,...pe('p2','L')[1]+10,...ee('landlord','R')[0]+4,...ee('landlord','R')[1]+10,'Property ID / Confirmation');
+arrow(...pe('p2','R'), ...de('d2','L'),            'Create / Update Property');
+arrow(...de('d2','L')[0],...de('d2','L')[1]+9,    ...pe('p2','R')[0],...pe('p2','R')[1]+9,'Property Record');
+/* Admin manage all */
+arrow(...ee('admin','R')[0],...ee('admin','R')[1]+10,...pe('p2','L')[0],...pe('p2','L')[1]+20,'Admin Edit / Delete');
+
+/* ── P3 Process Application ────────────────────────────────── */
+arrow(...ee('tenant','R')[0],...ee('tenant','R')[1]+6,...pe('p3','L')[0],...pe('p3','L')[1],'Rental / Purchase / Viewing Request');
+arrow(...ee('landlord','R')[0],...ee('landlord','R')[1]+8,...pe('p3','L')[0],...pe('p3','L')[1]+12,'Approve / Reject Decision');
+arrow(...pe('p3','R'), ...de('d3','L'),            'Store Application');
+arrow(...de('d3','L')[0],...de('d3','L')[1]+9,    ...pe('p3','R')[0],...pe('p3','R')[1]+9,'Application Status');
+/* P3 reads property info */
+arrow(...de('d2','L')[0],...de('d2','L')[1]+16,   ...pe('p3','R')[0],...pe('p3','R')[1]-14,'Property Details');
+
+/* ── P4 Record Payment ─────────────────────────────────────── */
+arrow(...ee('tenant','R')[0],...ee('tenant','R')[1]+12,...pe('p4','L')[0],...pe('p4','L')[1],'Payment Details / Reference No.');
+arrow(...pe('p4','L')[0]+4,...pe('p4','L')[1]+12,...ee('tenant','R')[0]+4,...ee('tenant','R')[1]+18,'Payment Confirmation');
+arrow(...pe('p4','R'), ...de('d4','L'),            'Payment Record');
+arrow(...de('d4','L')[0],...de('d4','L')[1]+9,    ...pe('p4','R')[0],...pe('p4','R')[1]+9,'Transaction History');
+/* P4 updates application status → triggers P5 */
+arrow(...pe('p4','T')[0]-6,...pe('p4','T')[1],...pe('p3','B')[0]+6,...pe('p3','B')[1],'Update to Acquired');
+
+/* ── P5 Generate Lease Agreement ───────────────────────────── */
+/* P4 triggers P5 */
+arrow(...pe('p4','TR')[0],...pe('p4','TR')[1]-4,...pe('p5','BL')[0],...pe('p5','BL')[1]+4,'Triggers Lease Generation');
+arrow(...pe('p5','R'), ...de('d5','L'),            'Create Lease Record');
+arrow(...de('d5','L')[0],...de('d5','L')[1]+9,    ...pe('p5','R')[0],...pe('p5','R')[1]+9,'Lease Contract');
+/* Lease returned to tenant */
+arrow(...pe('p5','L')[0],...pe('p5','L')[1],...ee('tenant','T')[0],...ee('tenant','T')[1],'Lease Agreement');
+/* Reads user & property */
+arrow(...de('d1','R'), ...pe('p5','L')[0],...pe('p5','L')[1]-8,'Tenant Profile');
+arrow(...de('d2','R'), ...pe('p5','T')[0]-20,...pe('p5','T')[1],'Property & Rent Info');
+
+/* ── P6 Handle Maintenance Request ─────────────────────────── */
+arrow(...ee('tenant','R')[0]+14,...ee('tenant','R')[1]-6,...pe('p6','L')[0],...pe('p6','L')[1],'Maintenance Request Details');
+arrow(...ee('landlord','R')[0]+14,...ee('landlord','R')[1]-8,...pe('p6','L')[0],...pe('p6','L')[1]+12,'Update Request Status');
+arrow(...pe('p6','R'), ...de('d6','L'),            'Log Maintenance Request');
+arrow(...de('d6','L')[0],...de('d6','L')[1]+9,    ...pe('p6','R')[0],...pe('p6','R')[1]+9,'Request Record');
+
+/* ── P7 Browse & Search Properties ────────────────────────── */
+arrow(...de('d2','R'), ...pe('p7','L'),            'Available Property Listings');
+arrow(...pe('p7','R'), ...ee('public','L'),         'Search Results / Property Cards');
+/* Tenant also browses */
+arrow(...ee('tenant','T')[0]+10,...ee('tenant','T')[1],...pe('p7','L')[0],...pe('p7','L')[1]-16,'Search Criteria');
+
+/* ── P8 Send Status Notification ───────────────────────────── */
+arrow(...de('d3','R'), ...pe('p8','L'),            'Status Change Event');
+arrow(...pe('p8','R'), ...ee('public','R')[0]+2,...ee('public','R')[1]-4,'Status Notification (Tenant)');
+arrow(...pe('p8','B')[0],...pe('p8','B')[1],...ee('landlord','R')[0]+16,...ee('landlord','R')[1]-16,'Owner Alert');
+/* P4 sends payment notification through P8 */
+arrow(...de('d4','R'), ...pe('p8','B')[0]+10,...pe('p8','B')[1]+4,'Payment Event');
+
+/* ══════════════════════════════════════════════════════════════
+   BORDER + FOOTER
+   ══════════════════════════════════════════════════════════════ */
+g.save();
+g.strokeStyle='#21262d';g.lineWidth=2;
+g.strokeRect(3,3,cv.width-6,cv.height-6);
+g.fillStyle='#30363d';g.font='11px Segoe UI';
+g.textAlign='right';g.textBaseline='bottom';
+g.fillText('AP Properties Real Estate Management System  |  Level 1 DFD  |  2026',cv.width-10,cv.height-6);
+g.restore();
+
+function exp(){
+  const a=document.createElement('a');
+  a.download='ap_properties_dfd_level1.png';
+  a.href=cv.toDataURL('image/png');a.click();
+}
+</script>
+</body>
+</html>

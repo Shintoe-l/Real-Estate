@@ -28,6 +28,34 @@ namespace RealEstate.Controllers
             return Ok(payment.ToPaymentDto());
         }
 
+        /// <summary>Returns all payments for a given set of lease IDs (comma-separated query param).</summary>
+        [HttpGet("by-leases")]
+        public async Task<IActionResult> GetByLeaseIds([FromQuery] string leaseIds)
+        {
+            var ids = leaseIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                              .Select(s => Guid.TryParse(s.Trim(), out var g) ? g : (Guid?)null)
+                              .Where(g => g.HasValue)
+                              .Select(g => g!.Value)
+                              .ToList();
+            var payments = await _paymentRepo.GetByLeaseIdsAsync(ids);
+            var dtos = payments.Select(p => p.ToPaymentDto());
+            return Ok(dtos);
+        }
+
+        /// <summary>Calculates the sum of all matching transactions directly in the database.</summary>
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetPaymentsSummary([FromQuery] string leaseIds)
+        {
+            var ids = leaseIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                              .Select(s => Guid.TryParse(s.Trim(), out var g) ? g : (Guid?)null)
+                              .Where(g => g.HasValue)
+                              .Select(g => g!.Value)
+                              .ToList();
+            var payments = await _paymentRepo.GetByLeaseIdsAsync(ids);
+            var totalAmount = payments.Sum(p => p.Amount);
+            return Ok(new { totalAmount });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreatePaymentDto dto)
         {

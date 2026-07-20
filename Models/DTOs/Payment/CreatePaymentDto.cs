@@ -16,5 +16,7 @@ namespace RealEstate.Models.DTOs.Payment
         public DateTime PaymentDate { get; set; }
 
         public PaymentType Type { get; set; }
+        public PaymentMethod Method { get; set; }
+        public string? Reference { get; set; }
     }
 }

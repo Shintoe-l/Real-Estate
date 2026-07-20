@@ -4,6 +4,7 @@ namespace RealEstate.Models.Enums
     {
         Pending,
         Approved,
-        Rejected
+        Rejected,
+        Acquired
     }
 }

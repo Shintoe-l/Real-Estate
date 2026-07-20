@@ -12,6 +12,7 @@ import { RealEstateStore } from '../../../../services/real-estate-store.service'
 export class PropertiesTabComponent {
   public store = inject(RealEstateStore);
 
+  filterStatus: number | null = null;
   newPropertyData = {
     address: '',
     city: '',

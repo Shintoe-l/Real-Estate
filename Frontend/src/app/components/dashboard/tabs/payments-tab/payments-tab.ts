@@ -15,11 +15,20 @@ export class PaymentsTabComponent {
   newPaymentData = {
     leaseId: '',
     amount: 0.0,
-    type: 0
+    type: 0,
+    method: 0,
+    reference: ''
   };
+
+  selectedTransaction: any = null;
 
   constructor() {
     // Sync local form state when store modifications occur (e.g. resets)
+    effect(() => {
+      const data = this.store.newPropertyData();
+      // Reset details popup if tab resets or data changes
+      this.selectedTransaction = null;
+    });
     effect(() => {
       const data = this.store.newPaymentData();
       this.newPaymentData = { ...data };
@@ -29,5 +38,13 @@ export class PaymentsTabComponent {
   submitPayment() {
     this.store.newPaymentData.set(this.newPaymentData);
     this.store.submitPayment();
+  }
+
+  selectTransaction(payment: any) {
+    this.selectedTransaction = payment;
+  }
+
+  closeDetails() {
+    this.selectedTransaction = null;
   }
 }

@@ -22,6 +22,12 @@ export class RealEstateStore {
   maintenanceRequests = signal<any[]>([]);
   applications = signal<any[]>([]);
 
+  // Server-computed lease summary (stored in DB, calculated server-side)
+  tenantLeaseSummary = signal<{ activeLeaseCount: number; totalMonthlyObligation: number } | null>(null);
+
+  // Server-computed transactions total (calculated server-side in DB)
+  dbTotalPayments = signal<number>(0);
+
   // Search Filter State
   searchCity = signal('');
   searchBedrooms = signal('');
@@ -34,6 +40,8 @@ export class RealEstateStore {
 
   loginData = signal({ email: '', password: '' });
   registerData = signal({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '', role: 2 });
+  showVerificationScreen = signal<boolean>(false);
+  verificationEmail = signal<string>('');
   
   newPropertyData = signal({
     address: '',
@@ -58,7 +66,9 @@ export class RealEstateStore {
   newPaymentData = signal({
     leaseId: '',
     amount: 0.0,
-    type: 0
+    type: 0,
+    method: 0,
+    reference: ''
   });
 
   // Feedback State
@@ -74,7 +84,13 @@ export class RealEstateStore {
     const role = user.role;
     if (role === 0) return this.properties(); // Admin sees all
     if (role === 1 || role === 3) return this.properties().filter(p => p.landlordId === user.id); // Landlord / PM see owned
-    if (role === 2) return this.properties().filter(p => this.leases().some(l => l.propertyId === p.id && l.tenantId === user.id)); // Tenant sees leased
+    if (role === 2) {
+      // Tenant sees leased properties OR properties they have acquired via approved payment
+      return this.properties().filter(p => 
+        this.leases().some(l => l.propertyId === p.id && l.tenantId === user.id) ||
+        this.applications().some(a => a.propertyId === p.id && a.tenantId === user.id && a.status === 3)
+      );
+    }
     return [];
   });
 
@@ -88,6 +104,10 @@ export class RealEstateStore {
     return [];
   });
 
+  myTotalMonthlyObligation = computed(() => {
+    return this.myLeases().reduce((sum, lease) => sum + (lease.monthlyRent || 0), 0);
+  });
+
   myPayments = computed(() => {
     const user = this.currentUser();
     if (!user) return [];
@@ -98,6 +118,10 @@ export class RealEstateStore {
       return this.payments().filter(p => allowedLeaseIds.has(p.leaseId));
     }
     return [];
+  });
+
+  myTotalPayments = computed(() => {
+    return this.dbTotalPayments();
   });
 
   myMaintenanceRequests = computed(() => {
@@ -175,32 +199,128 @@ export class RealEstateStore {
   }
 
   loadDashboardData() {
-    this.fetchProperties();
-    
-    this.apiService.getLeases().subscribe({
-      next: (data) => this.leases.set(data),
-      error: (err) => console.error('Error fetching leases', err)
-    });
-    
-    this.apiService.getPayments().subscribe({
-      next: (data) => this.payments.set(data),
-      error: (err) => console.error('Error fetching payments', err)
-    });
+    const user = this.currentUser();
+    if (!user) return;
 
-    this.apiService.getMaintenanceRequests().subscribe({
-      next: (data) => this.maintenanceRequests.set(data),
-      error: (err) => console.error('Error fetching maintenance', err)
-    });
-
-    this.apiService.getApplications().subscribe({
-      next: (data) => this.applications.set(data),
-      error: (err) => console.error('Error fetching applications', err)
-    });
-
-    if (this.currentUser()?.role === 0) {
+    if (user.role === 0) {
+      // ── Admin: fetch everything ──────────────────────────────────────────
+      this.apiService.getProperties().subscribe({
+        next: (data) => this.properties.set(data.map((p: any) => ({ ...p, currentImageIndex: 0 }))),
+        error: (err) => console.error('Error fetching properties', err)
+      });
+      this.apiService.getLeases().subscribe({
+        next: (data) => this.leases.set(data),
+        error: (err) => console.error('Error fetching leases', err)
+      });
+      this.apiService.getPayments().subscribe({
+        next: (data) => this.payments.set(data),
+        error: (err) => console.error('Error fetching payments', err)
+      });
+      this.apiService.getMaintenanceRequests().subscribe({
+        next: (data) => this.maintenanceRequests.set(data),
+        error: (err) => console.error('Error fetching maintenance', err)
+      });
+      this.apiService.getApplications().subscribe({
+        next: (data) => this.applications.set(data),
+        error: (err) => console.error('Error fetching applications', err)
+      });
       this.apiService.getPeople().subscribe({
         next: (data) => this.people.set(data),
         error: (err) => console.error('Error fetching people', err)
+      });
+
+    } else if (user.role === 1) {
+      // ── Landlord: fetch properties they own, then chain secondary fetches ──
+      this.apiService.getPropertiesByLandlord(user.id).subscribe({
+        next: (data) => {
+          this.properties.set(data.map((p: any) => ({ ...p, currentImageIndex: 0 })));
+          const propIds = data.map((p: any) => p.id as string);
+          if (propIds.length === 0) return;
+
+          // Leases for those properties
+          this.apiService.getLeases().subscribe({
+            next: (leases) => {
+              const filtered = leases.filter((l: any) => propIds.includes(l.propertyId));
+              this.leases.set(filtered);
+              const leaseIds = filtered.map((l: any) => l.id as string);
+
+              // Payments for those leases
+              if (leaseIds.length > 0) {
+                this.apiService.getPaymentsByLeaseIds(leaseIds).subscribe({
+                  next: (p) => this.payments.set(p),
+                  error: (err) => console.error('Error fetching landlord payments', err)
+                });
+                this.apiService.getPaymentsSummary(leaseIds).subscribe({
+                  next: (summary) => this.dbTotalPayments.set(summary.totalAmount || 0),
+                  error: (err) => console.error('Error fetching landlord payments summary', err)
+                });
+              }
+            },
+            error: (err) => console.error('Error fetching landlord leases', err)
+          });
+
+          // Maintenance requests for those properties
+          this.apiService.getMaintenanceByPropertyIds(propIds).subscribe({
+            next: (data) => this.maintenanceRequests.set(data),
+            error: (err) => console.error('Error fetching landlord maintenance', err)
+          });
+
+          // Applications for those properties
+          this.apiService.getApplicationsByPropertyIds(propIds).subscribe({
+            next: (data) => this.applications.set(data),
+            error: (err) => console.error('Error fetching landlord applications', err)
+          });
+
+          // People — needed so the Application Detail modal can resolve applicant names/contact info
+          this.apiService.getPeople().subscribe({
+            next: (data) => this.people.set(data),
+            error: (err) => console.error('Error fetching people for landlord', err)
+          });
+        },
+        error: (err) => console.error('Error fetching landlord properties', err)
+      });
+
+    } else if (user.role === 2) {
+      // ── Tenant: fetch all data scoped to their ID ─────────────────────────
+      // Keep browsable properties available (all properties for browsing)
+      this.fetchProperties();
+
+      // Leases directly from DB by tenant
+      this.apiService.getLeasesByTenant(user.id).subscribe({
+        next: (leases) => {
+          this.leases.set(leases);
+          // Payments for those leases
+          const leaseIds = leases.map((l: any) => l.id as string);
+          if (leaseIds.length > 0) {
+            this.apiService.getPaymentsByLeaseIds(leaseIds).subscribe({
+              next: (p) => this.payments.set(p),
+              error: (err) => console.error('Error fetching tenant payments', err)
+            });
+            this.apiService.getPaymentsSummary(leaseIds).subscribe({
+              next: (summary) => this.dbTotalPayments.set(summary.totalAmount || 0),
+              error: (err) => console.error('Error fetching tenant payments summary', err)
+            });
+          }
+        },
+        error: (err) => console.error('Error fetching tenant leases', err)
+      });
+
+      // DB-computed lease summary (totalMonthlyObligation)
+      this.apiService.getTenantLeaseSummary(user.id).subscribe({
+        next: (summary) => this.tenantLeaseSummary.set(summary),
+        error: (err) => console.error('Error fetching tenant lease summary', err)
+      });
+
+      // Maintenance requests by tenant
+      this.apiService.getMaintenanceByTenant(user.id).subscribe({
+        next: (data) => this.maintenanceRequests.set(data),
+        error: (err) => console.error('Error fetching tenant maintenance', err)
+      });
+
+      // Applications by tenant
+      this.apiService.getApplicationsByTenant(user.id).subscribe({
+        next: (data) => this.applications.set(data),
+        error: (err) => console.error('Error fetching tenant applications', err)
       });
     }
   }
@@ -227,13 +347,21 @@ export class RealEstateStore {
         }, 1000);
       },
       error: (err) => {
-        this.authError.set(err.error?.message || 'Invalid credentials. Please try again.');
+        if (err.error?.requiresVerification) {
+          this.verificationEmail.set(err.error.email);
+          this.showVerificationScreen.set(true);
+          this.navigateTo('register');
+          this.authError.set(err.error.message);
+        } else {
+          this.authError.set(err.error?.message || 'Invalid credentials. Please try again.');
+        }
       }
     });
   }
 
   onRegister() {
     this.authError.set('');
+    this.authSuccess.set('');
     
     const payload = {
       ...this.registerData(),
@@ -241,16 +369,56 @@ export class RealEstateStore {
     };
 
     this.apiService.register(payload).subscribe({
-      next: (res) => {
-        this.apiService.setSession(res);
-        this.authSuccess.set('Account created successfully! Redirecting...');
-        setTimeout(() => {
-          this.navigateTo('dashboard');
-          this.registerData.set({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '', role: 2 });
-        }, 1000);
+      next: (res: any) => {
+        this.verificationEmail.set(res.email);
+        this.showVerificationScreen.set(true);
+        this.authSuccess.set('Registration successful! Please enter the confirmation code sent to your email.');
+        this.registerData.update(d => ({ ...d, password: '' }));
       },
       error: (err) => {
         this.authError.set(err.error?.message || 'Error occurred during registration. Please try again.');
+      }
+    });
+  }
+
+  onVerifyEmail(code: string) {
+    this.authError.set('');
+    this.authSuccess.set('');
+    
+    const payload = {
+      email: this.verificationEmail(),
+      code: code
+    };
+
+    this.apiService.verifyEmail(payload).subscribe({
+      next: (res: any) => {
+        this.apiService.setSession(res);
+        this.authSuccess.set('Email verified successfully! Logging you in...');
+        setTimeout(() => {
+          this.showVerificationScreen.set(false);
+          this.navigateTo('dashboard');
+        }, 1000);
+      },
+      error: (err) => {
+        this.authError.set(err.error?.message || 'Verification failed. Please check the code.');
+      }
+    });
+  }
+
+  onResendVerification() {
+    this.authError.set('');
+    this.authSuccess.set('');
+
+    const payload = {
+      email: this.verificationEmail()
+    };
+
+    this.apiService.resendVerification(payload).subscribe({
+      next: (res: any) => {
+        this.authSuccess.set('A new verification code has been sent to your email.');
+      },
+      error: (err) => {
+        this.authError.set(err.error?.message || 'Failed to resend verification code.');
       }
     });
   }
@@ -320,6 +488,9 @@ export class RealEstateStore {
       landlordId: landlordId
     };
 
+    console.log('[submitPropertyForm] payload:', JSON.stringify(payload, null, 2));
+    console.log('[submitPropertyForm] currentUser:', this.currentUser());
+
     if (this.isEditingProperty() && this.editingPropertyId()) {
       this.apiService.updateProperty(this.editingPropertyId()!, payload).subscribe({
         next: () => {
@@ -327,7 +498,8 @@ export class RealEstateStore {
           this.fetchProperties();
           this.cancelEdit();
         },
-        error: () => {
+        error: (err) => {
+          console.error('[updateProperty] error:', err);
           this.dashboardError.set('Failed to update property. Check your inputs.');
         }
       });
@@ -338,7 +510,9 @@ export class RealEstateStore {
           this.fetchProperties();
           this.resetPropertyForm();
         },
-        error: () => {
+        error: (err) => {
+          console.error('[createProperty] error:', err);
+          console.error('[createProperty] error body:', err?.error);
           this.dashboardError.set('Failed to list property. Check your inputs.');
         }
       });
@@ -388,6 +562,36 @@ export class RealEstateStore {
     });
   }
 
+  updateMaintenanceRequestStatus(id: string, status: number) {
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    this.apiService.updateMaintenanceRequest(id, status).subscribe({
+      next: () => {
+        this.dashboardSuccess.set('Maintenance request status updated!');
+        this.loadDashboardData();
+      },
+      error: () => {
+        this.dashboardError.set('Failed to update maintenance request status.');
+      }
+    });
+  }
+
+  rateMaintenanceRequest(id: string, isSatisfied: boolean) {
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    this.apiService.rateMaintenanceRequest(id, isSatisfied).subscribe({
+      next: () => {
+        this.dashboardSuccess.set('Feedback submitted successfully!');
+        this.loadDashboardData();
+      },
+      error: () => {
+        this.dashboardError.set('Failed to submit feedback.');
+      }
+    });
+  }
+
   submitPayment() {
     this.dashboardError.set('');
     this.dashboardSuccess.set('');
@@ -401,14 +605,17 @@ export class RealEstateStore {
       leaseId: this.newPaymentData().leaseId,
       amount: Number(this.newPaymentData().amount),
       type: Number(this.newPaymentData().type),
+      method: Number(this.newPaymentData().method),
+      reference: this.newPaymentData().reference,
       paymentDate: new Date().toISOString()
     };
 
     this.apiService.createPayment(payload).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.dashboardSuccess.set('Rent payment processed successfully!');
+        this.downloadReceipt(payload, res.id);
         this.loadDashboardData();
-        this.newPaymentData.update(state => ({ ...state, amount: 0.0 }));
+        this.newPaymentData.update(state => ({ ...state, amount: 0.0, reference: '' }));
       },
       error: () => {
         this.dashboardError.set('Failed to process payment.');
@@ -497,6 +704,119 @@ export class RealEstateStore {
     });
   }
 
+  proceedAfterViewing(app: any, type: number) {
+    // type: 0 = Rent, 1 = Purchase, 2 = Not Interested (reject the application)
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    if (type === 2) {
+      // Tenant chose "Not Interested" - reject the viewing application
+      this.apiService.updateApplicationStatus(app.id, 2).subscribe({
+        next: () => {
+          this.dashboardSuccess.set('You have declined the property. No further action needed.');
+          this.loadDashboardData();
+        },
+        error: () => {
+          this.dashboardError.set('Failed to update application.');
+        }
+      });
+      return;
+    }
+
+    // Submit a new Rental (0) or Purchase (1) application for the same property
+    const payload = {
+      propertyId: app.propertyId,
+      tenantId: this.currentUser().id,
+      type: type
+    };
+
+    // First update the viewing application status to 3 (Acquired / Completed) to disable the action buttons
+    this.apiService.updateApplicationStatus(app.id, 3).subscribe({
+      next: () => {
+        this.apiService.createApplication(payload).subscribe({
+          next: () => {
+            const label = type === 0 ? 'Rental' : 'Purchase';
+            this.dashboardSuccess.set(`${label} application submitted! The owner will review it.`);
+            this.loadDashboardData();
+          },
+          error: (err) => {
+            this.dashboardError.set(err.error?.message || 'Failed to submit application.');
+          }
+        });
+      },
+      error: () => {
+        this.dashboardError.set('Failed to update viewing application status.');
+      }
+    });
+  }
+  submitPaymentFromApplication(app: any, amount: number, methodLabel: string, reference: string) {
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    // Map method label string from the modal to the PaymentMethod enum int
+    const methodMap: { [key: string]: number } = {
+      'EcoCash': 5, 'OneMoney': 5, 'TeleCash': 5,
+      'Bank Transfer': 1, 'ZIPIT': 1, 'Swipe/POS': 0,
+      'Credit Card': 0, 'Cash': 2, 'PayPal': 3,
+      'Receipt Upload': 4
+    };
+    const methodInt = methodMap[methodLabel] ?? 4;
+
+    // Update Application Status to Acquired (3)
+    this.apiService.updateApplicationStatus(app.id, 3).subscribe({
+      next: () => {
+        // Wait a tick to let the backend create the purchase/rental lease before querying
+        setTimeout(() => {
+          this.apiService.getLeasesByTenant(this.currentUser().id).subscribe({
+            next: (leases) => {
+              this.leases.set(leases);
+              const lease = leases.find((l: any) => l.propertyId === app.propertyId);
+              const leaseId = lease?.id;
+
+              if (!leaseId) {
+                // Backend may still be processing; show success but note payment not linked
+                this.dashboardSuccess.set(`✅ Status updated to Acquired. Reference: ${reference}. Payment ledger sync pending.`);
+                this.loadDashboardData();
+                return;
+              }
+
+              // PaymentType: 5 = PurchasePayment for type===1 (Purchase), 0 = Rent for type===0
+              const paymentType = app.type === 1 ? 5 : 0;
+
+              const payload = {
+                leaseId,
+                amount: Number(amount) || 0,
+                type: paymentType,
+                method: methodInt,
+                reference: reference,
+                paymentDate: new Date().toISOString()
+              };
+
+              this.apiService.createPayment(payload).subscribe({
+                next: (res: any) => {
+                  this.dashboardSuccess.set(`✅ Payment of $${amount} via ${methodLabel} submitted. Ref: ${reference}. Status updated to Acquired!`);
+                  this.downloadReceipt(payload, res.id);
+                  this.loadDashboardData();
+                },
+                error: () => {
+                  this.dashboardError.set('Payment registration in ledger failed, but application status updated.');
+                  this.loadDashboardData();
+                }
+              });
+            },
+            error: () => {
+              this.dashboardSuccess.set(`✅ Status updated to Acquired, but could not fetch agreement to record payment.`);
+              this.loadDashboardData();
+            }
+          });
+        }, 800); // allow backend time to create the purchase lease record
+      },
+      error: () => {
+        this.dashboardError.set('Failed to update application status to Acquired.');
+      }
+    });
+  }
+
   // Utility Getters
   getRoleName(role: number): string {
     switch (role) {
@@ -529,13 +849,62 @@ export class RealEstateStore {
     }
   }
 
+  getPaymentMethodName(method: number): string {
+    switch (method) {
+      case 0: return 'Credit Card';
+      case 1: return 'Bank Transfer';
+      case 2: return 'Cash';
+      case 3: return 'PayPal';
+      case 4: return 'Other';
+      case 5: return 'EcoCash';
+      default: return 'Other';
+    }
+  }
+
   getPropertyStatusName(status: number): string {
     switch (status) {
       case 0: return 'Available';
       case 1: return 'Rented';
       case 2: return 'Maintenance';
+      case 3: return 'Off Market';
+      case 4: return 'Sold';
       default: return 'Available';
     }
+  }
+
+  downloadReceipt(paymentPayload: any, generatedId: string) {
+    const user = this.currentUser();
+    const tenantName = user ? `${user.firstName} ${user.lastName}` : 'Tenant';
+    const lease = this.leases().find(l => l.id === paymentPayload.leaseId);
+    const property = lease ? this.properties().find(p => p.id === lease.propertyId) : null;
+    const address = property ? property.address : 'Leased Property';
+    const methodStr = this.getPaymentMethodName(paymentPayload.method);
+    const dateStr = new Date(paymentPayload.paymentDate).toLocaleString();
+
+    const receiptContent = `=============================================
+             OFFICIAL RECEIPT
+=============================================
+Transaction ID : ${generatedId || 'PENDING'}
+Date           : ${dateStr}
+Received From  : ${tenantName}
+Property       : ${address}
+---------------------------------------------
+Payment Method : ${methodStr}
+Reference / POP: ${paymentPayload.reference || 'N/A'}
+Amount Paid    : $${paymentPayload.amount.toFixed(2)}
+---------------------------------------------
+Thank you for your payment!
+=============================================`;
+
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Receipt_${generatedId ? generatedId.substring(0,8) : Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   }
 
   getPaymentStatusName(status: number): string {
@@ -550,10 +919,12 @@ export class RealEstateStore {
   getPaymentTypeName(type: number): string {
     switch (type) {
       case 0: return 'Rent';
-      case 1: return 'Deposit';
-      case 2: return 'Maintenance';
-      case 3: return 'Other';
-      default: return 'Rent';
+      case 1: return 'Security Deposit';
+      case 2: return 'Late Fee';
+      case 3: return 'Maintenance Fee';
+      case 4: return 'Other';
+      case 5: return 'Purchase Payment';
+      default: return 'Other';
     }
   }
 
@@ -571,6 +942,7 @@ export class RealEstateStore {
       case 0: return 'Pending';
       case 1: return 'Approved';
       case 2: return 'Rejected';
+      case 3: return 'Acquired';
       default: return 'Pending';
     }
   }
@@ -586,5 +958,26 @@ export class RealEstateStore {
       default:
         return 'Rental';
     }
+  }
+
+  getAcquiredApplicationForProperty(property: any) {
+    return this.myApplications().find(a => a.propertyId === property.id && a.status === 3 && (a.type === 0 || a.type === 1)) || null;
+  }
+
+  hasPendingOrApprovedViewingRequest(property: any): boolean {
+    return this.myApplications().some(a => 
+      a.propertyId === property.id && 
+      a.type === 2 && 
+      (a.status === 0 || a.status === 1 || a.status === 3)
+    );
+  }
+
+  getPropertyListingType(propertyId: string): number {
+    const p = this.properties().find(prop => prop.id === propertyId);
+    return p ? p.listingType : 0; // default to 0 (Rent) if not found
+  }
+
+  getPropertyDetails(propertyId: string): any | null {
+    return this.properties().find(p => p.id === propertyId) || null;
   }
 }

@@ -85,7 +85,8 @@ namespace RealEstate.Mappers
                 LastName = person.LastName,
                 Email = person.Email,
                 PhoneNumber = person.PhoneNumber,
-                Role = person.Role
+                Role = person.Role,
+                IsEmailConfirmed = person.IsEmailConfirmed
             };
         }
 
@@ -165,6 +166,8 @@ namespace RealEstate.Mappers
                 Amount = payment.Amount,
                 PaymentDate = payment.PaymentDate,
                 Type = payment.Type,
+                Method = payment.Method,
+                Reference = payment.Reference,
                 Status = payment.Status
             };
         }
@@ -178,6 +181,8 @@ namespace RealEstate.Mappers
                 Amount = dto.Amount,
                 PaymentDate = dto.PaymentDate,
                 Type = dto.Type,
+                Method = dto.Method,
+                Reference = dto.Reference,
                 Status = PaymentStatus.Pending // Pending by default
             };
         }
@@ -199,7 +204,8 @@ namespace RealEstate.Mappers
                 TenantId = request.TenantId,
                 Description = request.Description,
                 RequestDate = request.RequestDate,
-                Status = request.Status
+                Status = request.Status,
+                IsSatisfied = request.IsSatisfied
             };
         }
 
@@ -220,6 +226,7 @@ namespace RealEstate.Mappers
         {
             if (dto.Description != null) request.Description = dto.Description;
             if (dto.Status != null) request.Status = dto.Status.Value;
+            if (dto.IsSatisfied != null) request.IsSatisfied = dto.IsSatisfied.Value;
         }
 
         // ==========================================

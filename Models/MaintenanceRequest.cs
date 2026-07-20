@@ -13,5 +13,7 @@ namespace RealEstate.Models
         public DateTime RequestDate { get; set; }
         
         public MaintenanceStatus Status { get; set; }
+        
+        public bool? IsSatisfied { get; set; }
     }
 }
