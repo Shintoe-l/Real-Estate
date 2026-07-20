@@ -28,5 +28,29 @@ namespace RealEstate.Helpers
                 Console.WriteLine($"[EmailService] Failed to write to log file: {ex.Message}");
             }
         }
+        public static void SendMaintenanceReminder(string email, string landlordName, string propertyAddress, string requestDescription)
+        {
+            var message = $"==================================================\n" +
+                          $"📧 TO: {email}\n" +
+                          $"⚠️ URGENT: UNRESOLVED MAINTENANCE REQUEST\n" +
+                          $"Dear {landlordName},\n\n" +
+                          $"This is an automated reminder that a maintenance request for your property at {propertyAddress} remains unresolved.\n\n" +
+                          $"Issue Description:\n" +
+                          $"{requestDescription}\n\n" +
+                          $"Please review and resolve this request as soon as possible.\n" +
+                          $"⏰ SENT AT: {DateTime.Now}\n" +
+                          $"==================================================";
+
+            Console.WriteLine(message);
+
+            try
+            {
+                File.AppendAllText(LogFilePath, message + "\n\n");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EmailService] Failed to write to log file: {ex.Message}");
+            }
+        }
     }
 }

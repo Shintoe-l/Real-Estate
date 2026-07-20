@@ -204,7 +204,8 @@ namespace RealEstate.Mappers
                 TenantId = request.TenantId,
                 Description = request.Description,
                 RequestDate = request.RequestDate,
-                Status = request.Status
+                Status = request.Status,
+                IsSatisfied = request.IsSatisfied
             };
         }
 
@@ -225,6 +226,7 @@ namespace RealEstate.Mappers
         {
             if (dto.Description != null) request.Description = dto.Description;
             if (dto.Status != null) request.Status = dto.Status.Value;
+            if (dto.IsSatisfied != null) request.IsSatisfied = dto.IsSatisfied.Value;
         }
 
         // ==========================================

@@ -42,12 +42,14 @@
       <!-- Contextual Detail Inputs -->
       <div class="form-group" *ngIf="newPaymentData.method == 0">
         <label>Credit Card Number</label>
-        <input type="text" name="ccNumber" [(ngModel)]="newPaymentData.reference" placeholder="XXXX-XXXX-XXXX-XXXX" required />
+        <input type="text" name="ccNumber" [(ngModel)]="newPaymentData.reference" placeholder="XXXX-XXXX-XXXX-XXXX"
+          required />
       </div>
-      
+
       <div class="form-group" *ngIf="newPaymentData.method == 1">
         <label>Bank Transfer Reference</label>
-        <input type="text" name="btRef" [(ngModel)]="newPaymentData.reference" placeholder="POP / Ref Number" required />
+        <input type="text" name="btRef" [(ngModel)]="newPaymentData.reference" placeholder="POP / Ref Number"
+          required />
       </div>
 
       <div class="form-group" *ngIf="newPaymentData.method == 3">
@@ -57,7 +59,8 @@
 
       <div class="form-group" *ngIf="newPaymentData.method == 5">
         <label>EcoCash Mobile Number</label>
-        <input type="text" name="ecocashNum" [(ngModel)]="newPaymentData.reference" placeholder="e.g. 077X XXX XXX" required />
+        <input type="text" name="ecocashNum" [(ngModel)]="newPaymentData.reference" placeholder="e.g. 077X XXX XXX"
+          required />
       </div>
 
       <button type="submit" class="btn btn-primary" [disabled]="!paymentForm.form.valid">Authorize Payment</button>
@@ -80,9 +83,17 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let p of store.myPayments()" class="fade-in">
-          <td class="code">{{ p.id.substring(0,8) }}...</td>
-          <td class="code">{{ p.leaseId.substring(0,8) }}...</td>
+        <tr *ngFor="let p of store.myPayments()" class="fade-in" (click)="selectTransaction(p)" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.03)'" onmouseout="this.style.backgroundColor='transparent'">
+          <td>
+            <span class="status-indicator bg-blue" style="font-family: monospace; font-size: 11px; padding: 4px 8px; font-weight: normal; text-transform: none;">
+              TXN-{{ p.id.substring(0,6).toUpperCase() }}
+            </span>
+          </td>
+          <td>
+            <span class="status-indicator bg-yellow" style="font-family: monospace; font-size: 11px; padding: 4px 8px; font-weight: normal; text-transform: none;">
+              LSE-{{ p.leaseId.substring(0,6).toUpperCase() }}
+            </span>
+          </td>
           <td class="bold color-green">${{ p.amount | number:'1.2-2' }}</td>
           <td>{{ p.paymentDate | date:'medium' }}</td>
           <td>{{ store.getPaymentTypeName(p.type) }}</td>
@@ -97,10 +108,10 @@
       <tfoot style="border-top: 2px solid var(--border-glass);" *ngIf="store.myPayments().length > 0">
         <tr>
           <td colspan="2" class="bold" style="text-align: right; padding: 14px 16px; color: var(--text-secondary);">
-            Total Transactions <span style="font-size: 10px; font-weight: 400;">(from DB)</span>:
+            Total<span style="font-size: 10px; font-weight: 400;"></span>:
           </td>
           <td class="bold color-green" style="padding: 14px 16px; font-size: 15px;">
-            ${{ store.myTotalPayments() | number:'1.2-2' }}
+             ${{ store.myTotalPayments() | number:'1.2-2' }}
           </td>
           <td colspan="4"></td>
         </tr>
@@ -108,6 +119,81 @@
     </table>
     <div *ngIf="store.myPayments().length === 0" class="empty-state">
       <p>No transaction history recorded yet.</p>
+    </div>
+  </div>
+
+  <!-- Detailed Transaction View Modal -->
+  <div class="popup-overlay" *ngIf="selectedTransaction" (click)="closeDetails()">
+    <div class="popup-content card-glass" style="max-width: 500px; text-align: left; padding: 32px;" (click)="$event.stopPropagation()">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          <span>💳 Transaction Details</span>
+        </h3>
+        <button (click)="closeDetails()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px;">✕</button>
+      </div>
+
+      <div style="display: grid; gap: 16px;">
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Transaction Trace Code</div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+            <span class="status-indicator bg-blue" style="font-family: monospace; font-size: 13px; padding: 6px 12px; font-weight: bold; text-transform: none; display: inline-block;">
+              TXN-{{ selectedTransaction.id.substring(0,8).toUpperCase() }}
+            </span>
+            <span class="code" style="font-size: 11px; color: var(--text-muted);">({{ selectedTransaction.id }})</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Lease Trace Code</div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+            <span class="status-indicator bg-yellow" style="font-family: monospace; font-size: 13px; padding: 6px 12px; font-weight: bold; text-transform: none; display: inline-block;">
+              LSE-{{ selectedTransaction.leaseId.substring(0,8).toUpperCase() }}
+            </span>
+            <span class="code" style="font-size: 11px; color: var(--text-muted);">({{ selectedTransaction.leaseId }})</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Amount Paid</div>
+            <div class="bold color-green" style="font-size: 18px; margin-top: 4px;">${{ selectedTransaction.amount | number:'1.2-2' }}</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Status</div>
+            <div style="margin-top: 6px;">
+              <span class="status-indicator bg-green" style="font-size: 11px; padding: 4px 10px;">Completed</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Payment Type</div>
+            <div style="font-size: 14px; margin-top: 4px; color: #fff;">{{ store.getPaymentTypeName(selectedTransaction.type) }}</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Method</div>
+            <div style="font-size: 14px; margin-top: 4px; color: #fff;">{{ store.getPaymentMethodName(selectedTransaction.method) }}</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Reference / POP</div>
+          <div class="code" style="font-size: 13px; margin-top: 4px; color: #fff; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+            {{ selectedTransaction.reference || 'N/A' }}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Payment Date</div>
+          <div style="font-size: 14px; margin-top: 4px; color: #fff;">{{ selectedTransaction.paymentDate | date:'medium' }}</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="btn btn-secondary" (click)="store.downloadReceipt(selectedTransaction, selectedTransaction.id)">Download Receipt</button>
+        <button class="btn btn-primary" (click)="closeDetails()">Close</button>
+      </div>
     </div>
   </div>
 </div>

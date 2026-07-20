@@ -126,6 +126,14 @@ export class ApiService {
     return this.http.post(`${this.apiUrl}/maintenancerequest`, request);
   }
 
+  updateMaintenanceRequest(id: string, status: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/maintenancerequest/${id}`, { status });
+  }
+
+  rateMaintenanceRequest(id: string, isSatisfied: boolean): Observable<any> {
+    return this.http.put(`${this.apiUrl}/maintenancerequest/${id}`, { isSatisfied });
+  }
+
   // Application API
   getApplications(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/application`);

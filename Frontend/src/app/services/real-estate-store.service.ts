@@ -488,6 +488,9 @@ export class RealEstateStore {
       landlordId: landlordId
     };
 
+    console.log('[submitPropertyForm] payload:', JSON.stringify(payload, null, 2));
+    console.log('[submitPropertyForm] currentUser:', this.currentUser());
+
     if (this.isEditingProperty() && this.editingPropertyId()) {
       this.apiService.updateProperty(this.editingPropertyId()!, payload).subscribe({
         next: () => {
@@ -495,7 +498,8 @@ export class RealEstateStore {
           this.fetchProperties();
           this.cancelEdit();
         },
-        error: () => {
+        error: (err) => {
+          console.error('[updateProperty] error:', err);
           this.dashboardError.set('Failed to update property. Check your inputs.');
         }
       });
@@ -506,7 +510,9 @@ export class RealEstateStore {
           this.fetchProperties();
           this.resetPropertyForm();
         },
-        error: () => {
+        error: (err) => {
+          console.error('[createProperty] error:', err);
+          console.error('[createProperty] error body:', err?.error);
           this.dashboardError.set('Failed to list property. Check your inputs.');
         }
       });
@@ -552,6 +558,36 @@ export class RealEstateStore {
       },
       error: () => {
         this.dashboardError.set('Failed to submit maintenance request.');
+      }
+    });
+  }
+
+  updateMaintenanceRequestStatus(id: string, status: number) {
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    this.apiService.updateMaintenanceRequest(id, status).subscribe({
+      next: () => {
+        this.dashboardSuccess.set('Maintenance request status updated!');
+        this.loadDashboardData();
+      },
+      error: () => {
+        this.dashboardError.set('Failed to update maintenance request status.');
+      }
+    });
+  }
+
+  rateMaintenanceRequest(id: string, isSatisfied: boolean) {
+    this.dashboardError.set('');
+    this.dashboardSuccess.set('');
+
+    this.apiService.rateMaintenanceRequest(id, isSatisfied).subscribe({
+      next: () => {
+        this.dashboardSuccess.set('Feedback submitted successfully!');
+        this.loadDashboardData();
+      },
+      error: () => {
+        this.dashboardError.set('Failed to submit feedback.');
       }
     });
   }
@@ -939,5 +975,9 @@ Thank you for your payment!
   getPropertyListingType(propertyId: string): number {
     const p = this.properties().find(prop => prop.id === propertyId);
     return p ? p.listingType : 0; // default to 0 (Rent) if not found
+  }
+
+  getPropertyDetails(propertyId: string): any | null {
+    return this.properties().find(p => p.id === propertyId) || null;
   }
 }

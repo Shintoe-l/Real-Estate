@@ -6,5 +6,6 @@ namespace RealEstate.Models.DTOs.Maintenance
     {
         public string? Description { get; set; }
         public MaintenanceStatus? Status { get; set; }
+        public bool? IsSatisfied { get; set; }
     }
 }

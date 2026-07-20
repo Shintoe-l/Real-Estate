@@ -11,5 +11,6 @@ namespace RealEstate.Models.DTOs.Maintenance
         public string Description { get; set; } = string.Empty;
         public DateTime RequestDate { get; set; }
         public MaintenanceStatus Status { get; set; }
+        public bool? IsSatisfied { get; set; }
     }
 }

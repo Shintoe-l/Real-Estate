@@ -3,6 +3,7 @@ using Microsoft.OpenApi.Models;
 using RealEstate.Data;
 using RealEstate.Interfaces;
 using RealEstate.Repositories;
+using RealEstate.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,8 @@ builder.Services.AddControllers()
     {
         // Handle circular references in JSON serialization
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        // Use camelCase property names to match Angular/TypeScript conventions
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -74,6 +77,9 @@ builder.Services.AddScoped<ILeaseRepository, LeaseRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IMaintenanceRequestRepository, MaintenanceRequestRepository>();
 builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
+
+// Register background services
+builder.Services.AddHostedService<MaintenanceReminderService>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

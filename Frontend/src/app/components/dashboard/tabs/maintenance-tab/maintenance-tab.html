@@ -7,7 +7,9 @@
         <label>Select Associated Residence</label>
         <select name="propertyId" [(ngModel)]="newMaintenanceData.propertyId" required>
           <option value="">Choose Residence</option>
-          <option *ngFor="let l of store.myLeases()" [value]="l.propertyId">Leased Residence</option>
+          <option *ngFor="let l of store.myLeases()" [value]="l.propertyId">
+            {{ store.getPropertyDetails(l.propertyId)?.address || 'Leased Property' }} ({{ store.getPropertyDetails(l.propertyId)?.city }})
+          </option>
         </select>
       </div>
 
@@ -27,16 +29,23 @@
       <thead>
         <tr>
           <th>Request ID</th>
-          <th>Property ID</th>
+          <th>Property Address</th>
           <th>Description</th>
           <th>Lodge Date</th>
           <th>Status</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let m of store.myMaintenanceRequests()" class="fade-in">
-          <td class="code">{{ m.id.substring(0,8) }}...</td>
-          <td class="code">{{ m.propertyId.substring(0,8) }}...</td>
+        <tr *ngFor="let m of store.myMaintenanceRequests()" class="fade-in" (click)="selectRequest(m)" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.03)'" onmouseout="this.style.backgroundColor='transparent'">
+          <td>
+            <span class="status-indicator bg-blue" style="font-family: monospace; font-size: 11px; padding: 4px 8px; font-weight: normal; text-transform: none;">
+              REQ-{{ m.id.substring(0,6).toUpperCase() }}
+            </span>
+          </td>
+          <td>
+            <span style="font-weight: 500; color: #fff;">{{ store.getPropertyDetails(m.propertyId)?.address || 'Property' }}</span>
+            <div style="font-size: 11px; color: var(--text-secondary);">{{ store.getPropertyDetails(m.propertyId)?.city }}</div>
+          </td>
           <td>{{ m.description }}</td>
           <td>{{ m.requestDate | date:'mediumDate' }}</td>
           <td>
@@ -49,6 +58,100 @@
     </table>
     <div *ngIf="store.myMaintenanceRequests().length === 0" class="empty-state">
       <p>No maintenance service records reported.</p>
+    </div>
+  </div>
+
+  <!-- Detailed Maintenance Request Modal -->
+  <div class="popup-overlay" *ngIf="selectedRequest" (click)="closeDetails()">
+    <div class="popup-content card-glass" style="max-width: 500px; text-align: left; padding: 32px;" (click)="$event.stopPropagation()">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          <span>🔧 Maintenance Request</span>
+        </h3>
+        <button (click)="closeDetails()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px;">✕</button>
+      </div>
+
+      <div class="alert alert-success fade-in" *ngIf="store.dashboardSuccess() && selectedRequest" style="margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #34d399;">
+        {{ store.dashboardSuccess() }}
+      </div>
+
+      <div style="display: grid; gap: 16px;">
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Request Trace Code</div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+            <span class="status-indicator bg-blue" style="font-family: monospace; font-size: 13px; padding: 6px 12px; font-weight: bold; text-transform: none; display: inline-block;">
+              REQ-{{ selectedRequest.id.substring(0,8).toUpperCase() }}
+            </span>
+            <span class="code" style="font-size: 11px; color: var(--text-muted);">({{ selectedRequest.id }})</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Property Details</div>
+          <div style="margin-top: 6px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+            <div style="font-weight: 600; color: #fff; font-size: 14px;">{{ store.getPropertyDetails(selectedRequest.propertyId)?.address || 'Property Address' }}</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              {{ store.getPropertyDetails(selectedRequest.propertyId)?.city }}, {{ store.getPropertyDetails(selectedRequest.propertyId)?.province }}
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              Type: {{ store.getPropertyTypeName(store.getPropertyDetails(selectedRequest.propertyId)?.type) }}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Lodge Date</div>
+          <div style="font-size: 14px; margin-top: 4px; color: #fff;">{{ selectedRequest.requestDate | date:'medium' }}</div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Issue Description</div>
+          <div style="font-size: 13px; margin-top: 6px; color: #fff; background: rgba(255,255,255,0.03); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-glass); line-height: 1.5; white-space: pre-wrap;">
+            {{ selectedRequest.description }}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Current Status</div>
+          <div style="margin-top: 6px; display: flex; align-items: center; gap: 8px;">
+            <span class="status-indicator" [class.bg-yellow]="selectedRequest.status === 0" [class.bg-blue]="selectedRequest.status === 1" [class.bg-green]="selectedRequest.status === 2" style="font-size: 11px; padding: 4px 10px;">
+              {{ store.getMaintenanceStatusName(selectedRequest.status) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Landlord/Owner or Manager Actions -->
+        <div *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" style="margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 16px;">
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 10px;">Update Job Status</div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary btn-sm" style="flex: 1; border: 1px solid #f59e0b;" (click)="updateStatus(0)" [disabled]="selectedRequest.status === 0">Open</button>
+            <button class="btn btn-secondary btn-sm" style="flex: 1; border: 1px solid #3b82f6;" (click)="updateStatus(1)" [disabled]="selectedRequest.status === 1">In Progress</button>
+            <button class="btn btn-secondary btn-sm" style="flex: 1; border: 1px solid #10b981;" (click)="updateStatus(2)" [disabled]="selectedRequest.status === 2">Resolve</button>
+          </div>
+        </div>
+
+        <!-- Tenant Feedback Action -->
+        <div *ngIf="store.currentUser().role === 2 && selectedRequest.status === 2" style="margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 16px;">
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 10px;">Service Feedback</div>
+          
+          <div *ngIf="selectedRequest.isSatisfied == null" style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary btn-sm" style="flex: 1; border: 1px solid #10b981; color: #10b981;" (click)="rateMaintenance(true)">👍 Satisfied</button>
+            <button class="btn btn-secondary btn-sm" style="flex: 1; border: 1px solid #ef4444; color: #ef4444;" (click)="rateMaintenance(false)">👎 Not Satisfied</button>
+          </div>
+          
+          <div *ngIf="selectedRequest.isSatisfied != null" style="padding: 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 8px;">
+            <span *ngIf="selectedRequest.isSatisfied" style="color: #10b981; font-size: 18px;">👍</span>
+            <span *ngIf="!selectedRequest.isSatisfied" style="color: #ef4444; font-size: 18px;">👎</span>
+            <span style="font-size: 13px; color: #fff;">
+              You were {{ selectedRequest.isSatisfied ? 'satisfied' : 'not satisfied' }} with how this request was resolved.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="btn btn-primary" (click)="closeDetails()">Close</button>
+      </div>
     </div>
   </div>
 </div>
