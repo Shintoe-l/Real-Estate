@@ -24,7 +24,19 @@
 
   <!-- Maintenance Requests List -->
   <div class="card-glass">
-    <h3>🛠️ Maintenance Operations History</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0;">🛠️ Maintenance Operations History</h3>
+      <div class="filter-group" style="display: flex; align-items: center; gap: 12px;">
+        <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Filter by Status:</label>
+        <select [(ngModel)]="statusFilter" style="width: auto; padding: 8px 12px; min-width: 150px;">
+          <option value="all">All Requests</option>
+          <option value="0">Open</option>
+          <option value="1">In Progress</option>
+          <option value="2">Resolved</option>
+          <option *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0" value="outstanding">Outstanding</option>
+        </select>
+      </div>
+    </div>
     <table class="table-premium">
       <thead>
         <tr>
@@ -36,7 +48,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let m of store.myMaintenanceRequests()" class="fade-in" (click)="selectRequest(m)" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.03)'" onmouseout="this.style.backgroundColor='transparent'">
+        <tr *ngFor="let m of filteredRequests" class="fade-in" (click)="selectRequest(m)" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.03)'" onmouseout="this.style.backgroundColor='transparent'">
           <td>
             <span class="status-indicator bg-blue" style="font-family: monospace; font-size: 11px; padding: 4px 8px; font-weight: normal; text-transform: none;">
               REQ-{{ m.id.substring(0,6).toUpperCase() }}
@@ -52,12 +64,15 @@
             <span class="status-indicator" [class.bg-yellow]="m.status === 0" [class.bg-blue]="m.status === 1" [class.bg-green]="m.status === 2">
               {{ store.getMaintenanceStatusName(m.status) }}
             </span>
+            <span *ngIf="isOutstanding(m) && (store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0)" class="status-indicator bg-red" style="margin-left: 8px;">
+              Outstanding
+            </span>
           </td>
         </tr>
       </tbody>
     </table>
-    <div *ngIf="store.myMaintenanceRequests().length === 0" class="empty-state">
-      <p>No maintenance service records reported.</p>
+    <div *ngIf="filteredRequests.length === 0" class="empty-state">
+      <p>No maintenance service records found for the selected filter.</p>
     </div>
   </div>
 
