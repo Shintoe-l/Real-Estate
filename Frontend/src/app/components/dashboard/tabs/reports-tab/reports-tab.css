@@ -1,0 +1,82 @@
+/* Base layout overrides for the report tab if needed */
+.report-header {
+  display: none; /* Hide header by default, only show on print */
+}
+
+.text-success { color: #38ef7d; }
+.text-warning { color: #ffd200; }
+
+/* Print Media Query */
+@media print {
+  /* Hide unnecessary UI elements */
+  .dashboard-sidebar, 
+  .no-print, 
+  .app-header, 
+  .navbar, 
+  header, 
+  footer, 
+  .sidebar-menu, 
+  .user-avatar {
+    display: none !important;
+  }
+
+  /* Reset layout for printing */
+  body, .dashboard-page, .dashboard-container, .dashboard-main, .tab-pane {
+    height: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Force background colors on for charts/badges if browser allows, though usually standard black/white is better */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure card backgrounds are clear */
+  .card-glass {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 2rem !important;
+  }
+
+  /* Dark mode text to black */
+  .card-glass h3, .bold, .table-premium th, .table-premium td, .report-header h1, .report-header p {
+    color: black !important;
+  }
+
+  .text-success, .text-warning {
+    color: black !important; /* Force to black for better contrast on paper */
+  }
+
+  /* Table borders for print */
+  .table-premium {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .table-premium th, .table-premium td {
+    border: 1px solid #ccc !important;
+    padding: 8px !important;
+  }
+
+  /* Show header */
+  .report-header {
+    display: block !important;
+    text-align: center;
+    border-bottom: 2px solid black;
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Page breaks */
+  .section-break {
+    page-break-inside: avoid;
+  }
+}

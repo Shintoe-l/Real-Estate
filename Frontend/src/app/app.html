@@ -7,23 +7,25 @@
   <!-- ==================== 1. LANDING PAGE ==================== -->
   <section *ngIf="store.activePage() === 'home'" class="page home-page fade-in">
     <!-- Hero Block -->
-    <div class="hero-section" style="background-image: linear-gradient(180deg, rgba(10,20,30,0.15) 0%, rgba(10,20,30,0.85) 100%), url('assets/hero_bg.jpg');">
+    <div class="hero-section"
+      style="background-image: linear-gradient(180deg, rgba(10,20,30,0.15) 0%, rgba(10,20,30,0.85) 100%), url('assets/hero_bg.jpg');">
       <div class="hero-overlay"></div>
       <div class="hero-content">
         <span class="tagline">Luxury Redefined</span>
         <h1>Find Your Signature Modern Sanctuary</h1>
         <p>Curated smart-homes, premium locations, and effortless digital leasing management.</p>
-        
+
         <!-- Quick Search Bar -->
         <div class="search-bar-floating">
           <div class="search-input-group">
             <span class="icon">📍</span>
-            <input type="text" placeholder="Search by city (e.g. Miami, Seattle)..." [ngModel]="store.searchCity()" (ngModelChange)="store.searchCity.set($event)" />
+            <input type="text" placeholder="Search by city (e.g. Bulawayo, Harare)..." [ngModel]="store.searchCity()"
+              (ngModelChange)="store.searchCity.set($event)" />
           </div>
           <div class="search-input-group">
             <span class="icon">🛏️</span>
             <select [ngModel]="store.searchBedrooms()" (ngModelChange)="store.searchBedrooms.set($event)">
-              <option value="">Bedrooms (All)</option>
+              <option value="">Bedrooms(All)</option>
               <option value="1">1+ Bedrooms</option>
               <option value="2">2+ Bedrooms</option>
               <option value="3">3+ Bedrooms</option>
@@ -41,7 +43,8 @@
           </div>
           <div class="search-input-group">
             <span class="icon">💰</span>
-            <input type="number" placeholder="Max monthly rent..." [ngModel]="store.searchMaxPrice()" (ngModelChange)="store.searchMaxPrice.set($event)" />
+            <input type="number" placeholder="Amount" [ngModel]="store.searchMaxPrice()"
+              (ngModelChange)="store.searchMaxPrice.set($event)" />
           </div>
         </div>
       </div>

@@ -104,9 +104,9 @@ using (var scope = app.Services.CreateScope())
     try
     {
         // Recreate DB with latest schema in Development for instant prototyping
-        context.Database.EnsureDeleted();
+        // context.Database.EnsureDeleted();
         context.Database.EnsureCreated();
-        DbInitializer.Initialize(context);
+        // DbInitializer.Initialize(context);
     }
     catch (Exception ex)
     {

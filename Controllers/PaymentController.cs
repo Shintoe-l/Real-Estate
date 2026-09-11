@@ -5,12 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 using RealEstate.Interfaces;
 using RealEstate.Mappers;
 using RealEstate.Models.DTOs.Payment;
+using RealEstate.Models.Enums;
 
 namespace RealEstate.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PaymentController(IPaymentRepository _paymentRepo) : ControllerBase
+    public class PaymentController(
+        IPaymentRepository _paymentRepo,
+        ILeaseRepository _leaseRepo,
+        IPropertyRepository _propertyRepo) : ControllerBase
     {
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -62,6 +66,21 @@ namespace RealEstate.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var payment = dto.ToPaymentFromCreate();
             await _paymentRepo.CreateAsync(payment);
+
+            // Automatically update the associated property status
+            var lease = await _leaseRepo.GetByIdAsync(payment.LeaseId);
+            if (lease != null)
+            {
+                var property = await _propertyRepo.GetByIdAsync(lease.PropertyId);
+                if (property != null)
+                {
+                    // If lease is inactive, it's a purchase agreement -> Sold
+                    // If lease is active, it's a rental -> Occupied
+                    property.Status = lease.IsActive ? PropertyStatus.Occupied : PropertyStatus.Sold;
+                    await _propertyRepo.UpdateAsync(property.Id, property);
+                }
+            }
+
             return CreatedAtAction(nameof(GetById), new { id = payment.Id }, payment.ToPaymentDto());
         }
 

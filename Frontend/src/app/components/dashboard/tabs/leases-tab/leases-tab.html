@@ -1,5 +1,6 @@
 <div class="tab-pane fade-in">
-  <div class="card-glass">
+  <!-- Lease Directory List -->
+  <div class="card-glass" *ngIf="!selectedLease">
     <h3>📜 Lease Contracts Directory</h3>
     <table class="table-premium">
       <thead>
@@ -13,7 +14,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let l of store.myLeases()" class="fade-in">
+        <tr *ngFor="let l of store.myLeases()" class="fade-in table-row-clickable" style="cursor: pointer;" (click)="viewLease(l)">
           <td class="code">{{ l.id.substring(0,8) }}...</td>
           <td class="code">{{ l.tenantId.substring(0,8) }}...</td>
           <td class="code">{{ l.propertyId.substring(0,8) }}...</td>
@@ -25,6 +26,51 @@
     </table>
     <div *ngIf="store.myLeases().length === 0" class="empty-state">
       <p>No active lease contracts registered.</p>
+    </div>
+  </div>
+
+  <!-- Lease Details View -->
+  <div class="card-glass fade-in" *ngIf="selectedLease">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3>Lease Details</h3>
+      <button class="btn btn-secondary" (click)="closeLeaseDetails()">Back to Directory</button>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+      <!-- Lease Info -->
+      <div class="card-glass" style="background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 12px;">
+        <h4>📜 Contract Information</h4>
+        <div style="margin-top: 15px; display: grid; gap: 10px;">
+          <p><strong>Lease ID:</strong> <span class="code">{{ selectedLease.id }}</span></p>
+          <p><strong>Tenant ID:</strong> <span class="code">{{ selectedLease.tenantId }}</span></p>
+          <p><strong>Start Date:</strong> {{ selectedLease.startDate | date:'mediumDate' }}</p>
+          <p><strong>End Date:</strong> {{ selectedLease.endDate | date:'mediumDate' }}</p>
+          <p><strong>Monthly Rent:</strong> <span class="bold" style="color: #4CAF50;">${{ selectedLease.monthlyRent | number:'1.2-2' }}</span></p>
+          <p *ngIf="selectedLease.depositAmount"><strong>Deposit:</strong> ${{ selectedLease.depositAmount | number:'1.2-2' }}</p>
+        </div>
+      </div>
+
+      <!-- Property Info -->
+      <div class="card-glass" style="background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 12px;">
+        <ng-container *ngIf="getProperty(selectedLease.propertyId) as property; else noProperty">
+          <h4>🏠 Property Details</h4>
+          <div *ngIf="property.imageUrls && property.imageUrls.length > 0" style="margin-top: 15px; margin-bottom: 15px;">
+            <img [src]="property.imageUrls[0]" alt="Property Image" style="width: 100%; height: 180px; object-fit: cover; border-radius: 8px;">
+          </div>
+          <div style="display: grid; gap: 10px;">
+            <p><strong>Address:</strong> {{ property.address }}</p>
+            <p><strong>City/Province:</strong> {{ property.city }}, {{ property.province }}</p>
+            <p><strong>Bedrooms:</strong> {{ property.bedrooms }} | <strong>Bathrooms:</strong> {{ property.bathrooms }}</p>
+            <p><strong>Size:</strong> {{ property.size }} sqft</p>
+            <p><strong>Property ID:</strong> <span class="code">{{ property.id }}</span></p>
+          </div>
+        </ng-container>
+        <ng-template #noProperty>
+          <div style="margin-top: 15px;">
+            <p>Property details not available.</p>
+          </div>
+        </ng-template>
+      </div>
     </div>
   </div>
 </div>
