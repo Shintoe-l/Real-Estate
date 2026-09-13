@@ -12,7 +12,7 @@ export class RealEstateStore {
 
   // Navigation & Page State
   activePage = signal<'home' | 'login' | 'register' | 'dashboard'>('home');
-  dashboardTab = signal<'overview' | 'properties' | 'leases' | 'payments' | 'maintenance' | 'applications'>('overview');
+  dashboardTab = signal<'overview' | 'properties' | 'leases' | 'payments' | 'maintenance' | 'applications' | 'reports'>('overview');
 
   // Master Data Signals
   properties = signal<any[]>([]);

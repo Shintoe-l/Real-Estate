@@ -7,6 +7,7 @@ import { LeasesTabComponent } from './tabs/leases-tab/leases-tab';
 import { PaymentsTabComponent } from './tabs/payments-tab/payments-tab';
 import { MaintenanceTabComponent } from './tabs/maintenance-tab/maintenance-tab';
 import { ApplicationsTabComponent } from './tabs/applications-tab/applications-tab';
+import { ReportsTabComponent } from './tabs/reports-tab/reports-tab';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,7 +19,8 @@ import { ApplicationsTabComponent } from './tabs/applications-tab/applications-t
     LeasesTabComponent,
     PaymentsTabComponent,
     MaintenanceTabComponent,
-    ApplicationsTabComponent
+    ApplicationsTabComponent,
+    ReportsTabComponent
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css'

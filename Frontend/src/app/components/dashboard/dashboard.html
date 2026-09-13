@@ -42,6 +42,11 @@
             <span>📋</span> Applications
           </a>
         </li>
+        <li *ngIf="store.currentUser().role === 1 || store.currentUser().role === 3 || store.currentUser().role === 0">
+          <a (click)="store.dashboardTab.set('reports')" [class.active]="store.dashboardTab() === 'reports'">
+            <span>📈</span> Reports
+          </a>
+        </li>
       </ul>
     </aside>
 
@@ -59,6 +64,7 @@
       <app-payments-tab *ngIf="store.dashboardTab() === 'payments'"></app-payments-tab>
       <app-maintenance-tab *ngIf="store.dashboardTab() === 'maintenance'"></app-maintenance-tab>
       <app-applications-tab *ngIf="store.dashboardTab() === 'applications'"></app-applications-tab>
+      <app-reports-tab *ngIf="store.dashboardTab() === 'reports'"></app-reports-tab>
     </div>
   </div>
 </section>
